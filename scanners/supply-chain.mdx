@@ -1,0 +1,121 @@
+---
+title: "Supply Chain Scanner"
+description: "Detect dependency confusion, floating versions, missing lockfiles, and known CVEs."
+---
+
+## Overview
+
+The supply chain scanner analyzes your project's dependency manifests for risks that could allow an attacker to inject malicious code during a build. It runs on `scan repo` and `scan github` targets.
+
+## Checks
+
+### Lockfile check
+
+**Severity:** HIGH | **Confidence:** 85%
+
+Detects projects that declare dependencies without a lockfile. Without a lockfile, `npm install` or `pip install` can silently install different versions on each run — including versions with newly disclosed vulnerabilities.
+
+**Detected for:**
+- npm: missing `package-lock.json` or `yarn.lock` or `pnpm-lock.yaml`
+- Python: missing `Pipfile.lock` or `poetry.lock` (when `Pipfile` or `pyproject.toml` exists)
+
+```bash
+# Fix for npm
+npm install          # generates package-lock.json
+git add package-lock.json && git commit -m "Add npm lockfile"
+
+# Fix for yarn
+yarn install         # generates yarn.lock
+
+# Fix for Python (poetry)
+poetry lock          # generates poetry.lock
+```
+
+### Floating version check (npm)
+
+**Severity:** MEDIUM | **Confidence:** 75%
+
+Detects npm packages declared with floating version ranges (`^`, `~`, `*`, `latest`). These ranges allow patch and minor updates to be pulled in automatically, which can introduce breaking changes or compromised packages.
+
+```json
+// package.json — flagged
+{
+  "dependencies": {
+    "express": "^4.18.0",    // Any 4.x version OK
+    "lodash": "~4.17.0",     // Any 4.17.x OK
+    "axios": "*"              // Any version OK — HIGH risk
+  }
+}
+```
+
+```bash
+# Fix: pin all versions
+npm install --save-exact express lodash axios
+# Or manually set exact versions and commit package-lock.json
+```
+
+### Dependency confusion check
+
+**Severity:** HIGH | **Confidence:** 70%
+
+Detects package names that look like internal scoped packages (`@company/internal-tool`) but may not be published to the public npm registry. Dependency confusion attacks trick package managers into downloading a malicious public package with the same name as an internal one.
+
+**How it works:** The scanner flags scoped packages (`@org/name`) and checks if the organization namespace could be registered publicly. It also looks for import patterns that suggest private registry use without explicit registry configuration.
+
+**Remediation:**
+```bash
+# Add .npmrc to lock to your private registry
+@mycompany:registry=https://registry.mycompany.com/
+# Or use npm publish to "claim" the namespace on npmjs.com
+```
+
+### CVE check (OSV.dev)
+
+**Severity:** Varies | **Confidence:** 90%
+
+When `--check-cves` is passed, ZenVeil queries the [Open Source Vulnerabilities database](https://osv.dev) for known CVEs in your pinned dependencies. This requires network access.
+
+```bash
+zenveil scan repo . --check-cves
+zenveil scan github owner/repo --check-cves
+```
+
+**Supported ecosystems:**
+- npm (`package-lock.json`)
+- PyPI (`requirements.txt`, `Pipfile.lock`, `poetry.lock`)
+
+**Example finding:**
+
+```
+ID:          ZG-B2C3D4
+Severity:    HIGH
+Title:       Known CVE in dependency
+Scanner:     supply_chain
+Evidence:    lodash@4.17.20 is affected by CVE-2021-23337 (Prototype Pollution)
+Remediation: Upgrade lodash to 4.17.21 or later.
+```
+
+## Sample output
+
+```
+╭─────────────────────────────────────────────────────────────────────────╮
+│  ZenVeil Supply Chain Scan                                              │
+│  Target: /home/user/my-app                                              │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+┌──────────┬──────────┬─────────────┬──────────────────────────────────────────┐
+│ ID       │ Severity │ Scanner     │ Title                                    │
+├──────────┼──────────┼─────────────┼──────────────────────────────────────────┤
+│ ZG-G7H8  │ HIGH     │ supply_chain│ Missing lockfile (package.json)          │
+│ ZG-P1Q2  │ HIGH     │ supply_chain│ Dependency confusion risk (@myco/utils)  │
+│ ZG-R3S4  │ MEDIUM   │ supply_chain│ Floating npm version (express: ^4.18.0) │
+└──────────┴──────────┴─────────────┴──────────────────────────────────────────┘
+
+3 finding(s) · HIGH: 2 · MEDIUM: 1
+```
+
+## Why supply chain security matters
+
+The 2020 SolarWinds attack compromised 18,000 organizations by injecting malicious code into a software build pipeline. The 2021 `ua-parser-js` attack affected millions of projects when an attacker published a malicious version of a popular npm package. The `colors` and `faker` incidents showed how a single maintainer decision can sabotage thousands of downstream projects.
+
+Your supply chain is only as secure as your weakest dependency. ZenVeil gives you visibility before it's a headline.

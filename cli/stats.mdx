@@ -1,0 +1,28 @@
+---
+title: "zenveil stats"
+description: "Show summary statistics from the last scan."
+---
+
+See [zenveil list & stats](/cli/list) for full documentation.
+
+## Quick reference
+
+```bash
+zenveil stats
+```
+
+```
+Scan target  : /home/user/my-api (repo)
+Started      : 2026-05-25T09:41:22Z
+Completed    : 2026-05-25T09:41:24Z
+Total findings: 5
+
+By severity:
+  CRITICAL   1
+  HIGH       3
+  MEDIUM     1
+
+By scanner:
+  secrets              4
+  supply_chain         1
+```

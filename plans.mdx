@@ -1,0 +1,117 @@
+---
+title: "Plans & Pricing"
+description: "ZenVeil is free to start. Scale up when you need more scans, AI features, and team collaboration."
+---
+
+## Plans
+
+<CardGroup cols={3}>
+  <Card title="Free" icon="seedling">
+    **$0/month**
+
+    Perfect for individual developers and open-source projects.
+
+    - 10 scans/day
+    - Secrets scanning
+    - Supply chain scanning
+    - API header scanning
+    - JSON + HTML reports
+    - 30-day scan history
+    - Community support
+  </Card>
+  <Card title="Pro" icon="rocket" color="#A78BFA">
+    **$19/month**
+
+    For developers who ship fast and take security seriously.
+
+    - 100 scans/day
+    - Everything in Free
+    - AI explain + fix + triage
+    - AI agent (interactive REPL)
+    - CVE checks via OSV.dev
+    - Auto-PR remediation
+    - 90-day scan history
+    - Email support
+  </Card>
+  <Card title="Team" icon="building">
+    **$79/month**
+
+    For teams with compliance needs and shared security workflows.
+
+    - Unlimited scans
+    - Everything in Pro
+    - Team dashboard
+    - Shared API keys
+    - Audit logs
+    - SAML SSO (coming)
+    - Priority support
+    - SLA guarantee
+  </Card>
+</CardGroup>
+
+## Feature comparison
+
+| Feature | Free | Pro | Team |
+|---|---|---|---|
+| Scans per day | 10 | 100 | Unlimited |
+| Secrets scanning | ✓ | ✓ | ✓ |
+| Supply chain scanning | ✓ | ✓ | ✓ |
+| API header scanning | ✓ | ✓ | ✓ |
+| CVE checks (OSV.dev) | — | ✓ | ✓ |
+| AI explain | — | ✓ | ✓ |
+| AI fix | — | ✓ | ✓ |
+| AI triage | — | ✓ | ✓ |
+| AI agent (REPL) | — | ✓ | ✓ |
+| Auto-PR remediation | — | ✓ | ✓ |
+| JSON / HTML reports | ✓ | ✓ | ✓ |
+| Scan history | 30 days | 90 days | Unlimited |
+| Team members | 1 | 1 | Unlimited |
+| Shared API keys | — | — | ✓ |
+| Audit logs | — | — | ✓ |
+| Support | Community | Email | Priority |
+
+## Billing
+
+- Monthly billing. Cancel anytime — your plan downgrades at the end of the current period.
+- Annual billing available at 20% discount.
+- Payments processed by Stripe. We never see your card details.
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="Does the free plan require a credit card?" icon="credit-card">
+    No. Sign up with your GitHub account or email — no payment information required for the Free plan.
+  </Accordion>
+  <Accordion title="Can I scan private repositories on the free plan?" icon="lock">
+    Yes. Private GitHub repository scanning is available on all plans (with your own GitHub token). The plan limit applies to the number of scans, not repository visibility.
+  </Accordion>
+  <Accordion title="Do AI features require my own Anthropic API key?" icon="key">
+    AI features (explain, fix, triage, agent) use your Anthropic API key, which you provide. Your usage is billed directly by Anthropic based on tokens used. ZenVeil does not add a markup on AI usage.
+
+    Alternatively, the ZenVeil API provides AI analysis without requiring you to manage your own key — usage is included in your plan's AI request allowance.
+  </Accordion>
+  <Accordion title="What happens if I exceed my scan limit?" icon="gauge">
+    On Free and Pro plans, scans beyond the daily limit return an error. Your existing scan cache and all other commands (list, explain, fix, etc.) continue to work. Upgrade your plan to increase limits.
+  </Accordion>
+  <Accordion title="Is there a self-hosted option?" icon="server">
+    The Python CLI and scanning API are open-source and can be self-hosted. The web dashboard, billing, and AI features require a ZenVeil subscription. Contact `hello@zenveil.dev` for enterprise pricing on fully self-hosted deployments.
+  </Accordion>
+  <Accordion title="Do you offer discounts for startups or open source?" icon="hand-holding-heart">
+    Yes. Email `hello@zenveil.dev` with your project details:
+    - Open source projects: Free Pro plan
+    - Early-stage startups (< $1M ARR): 50% discount
+    - Non-profits: Free Pro plan
+  </Accordion>
+</AccordionGroup>
+
+## Enterprise
+
+For organizations that need custom contracts, SAML SSO, on-prem deployment, or dedicated SLA support, contact us at `enterprise@zenveil.dev`.
+
+Enterprise features (available Q3 2026):
+- SAML/OIDC SSO
+- Custom data residency
+- Dedicated infrastructure
+- 99.9% SLA
+- Custom contract and invoicing
+- Security questionnaire completion support (SOC 2, ISO 27001)

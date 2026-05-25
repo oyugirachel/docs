@@ -1,0 +1,65 @@
+---
+title: "POST /v1/fix"
+description: "Stream an AI-generated fix for a security finding."
+---
+
+## Endpoint
+
+```
+POST /v1/fix
+```
+
+Returns a streaming `text/plain` response containing an AI-generated fix.
+
+## Request
+
+Same body structure as `/v1/explain`:
+
+```json
+{
+  "finding": { ... },
+  "api_key": "sk-ant-optional-override"
+}
+```
+
+See [POST /v1/explain](/api-reference/explain) for the full `FindingSchema`.
+
+## Response
+
+Streaming `text/plain` — a structured fix suggestion including code diffs, migration steps, and context.
+
+## Examples
+
+<CodeGroup>
+```python Python
+import httpx
+
+with httpx.stream(
+    "POST",
+    "https://api.zenveil.dev/v1/fix",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={"finding": finding},
+) as response:
+    for chunk in response.iter_text():
+        print(chunk, end="", flush=True)
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.zenveil.dev/v1/fix', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'zvk_live_your_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ finding }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  process.stdout.write(decoder.decode(value));
+}
+```
+</CodeGroup>

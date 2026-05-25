@@ -1,0 +1,140 @@
+---
+title: "POST /v1/scan/github"
+description: "Scan a GitHub repository for secrets, supply chain risks, and OWASP vulnerabilities."
+---
+
+## Endpoint
+
+```
+POST /v1/scan/github
+```
+
+## Request
+
+### Headers
+
+| Header | Value |
+|---|---|
+| `X-API-Key` | Your ZenVeil API key |
+| `Content-Type` | `application/json` |
+
+### Body
+
+```json
+{
+  "repository": "owner/repo",
+  "token": "ghp_optional_github_token",
+  "ref": "main",
+  "check_cves": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `repository` | string | Yes | `owner/repo`, `https://github.com/owner/repo`, or SSH URL |
+| `token` | string | No | GitHub personal access token for private repositories |
+| `ref` | string | No | Branch, tag, or commit SHA to scan. Defaults to default branch. |
+| `check_cves` | boolean | No | Query OSV.dev for known CVEs (default: `false`) |
+
+## Response
+
+```json
+{
+  "scan_id": "a1b2c3d4e5f6",
+  "status": "completed",
+  "target_type": "github",
+  "target": "owner/repo",
+  "started_at": "2026-05-25T09:41:22Z",
+  "completed_at": "2026-05-25T09:41:24Z",
+  "finding_count": 3,
+  "findings": [
+    {
+      "id": "ZG-A1B2C3",
+      "category": "secrets",
+      "severity": "CRITICAL",
+      "title": "AWS access key",
+      "description": "Potential secret or sensitive credential found in repository source.",
+      "evidence": "AWS access key pattern matched; secret value redacted.",
+      "location": {
+        "target": "owner/repo",
+        "path": "src/config.js",
+        "line": 14,
+        "column": 23,
+        "url": null,
+        "method": null
+      },
+      "scanner_name": "secrets",
+      "remediation": "Revoke the AWS key and load it from a secret manager or environment variable.",
+      "confidence": 0.95,
+      "owasp_categories": ["A02:2021"]
+    }
+  ]
+}
+```
+
+## Examples
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.zenveil.dev/v1/scan/github \
+  -H "X-API-Key: zvk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repository": "owner/repo",
+    "check_cves": true
+  }'
+```
+
+```python Python
+import httpx
+
+response = httpx.post(
+    "https://api.zenveil.dev/v1/scan/github",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={
+        "repository": "owner/repo",
+        "token": "ghp_your_github_token",
+        "check_cves": True,
+    },
+)
+
+result = response.json()
+print(f"Found {result['finding_count']} findings")
+
+for finding in result["findings"]:
+    print(f"[{finding['severity']}] {finding['title']} — {finding['location']['path']}:{finding['location']['line']}")
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.zenveil.dev/v1/scan/github', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'zvk_live_your_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    repository: 'owner/repo',
+    token: process.env.GITHUB_TOKEN,
+    check_cves: true,
+  }),
+});
+
+const result = await response.json();
+console.log(`Found ${result.finding_count} findings`);
+
+result.findings.forEach(f => {
+  console.log(`[${f.severity}] ${f.title} — ${f.location.path}:${f.location.line}`);
+});
+```
+</CodeGroup>
+
+## Error responses
+
+| Status | Error | Cause |
+|---|---|---|
+| `400` | Bad request | Invalid repository format or missing required fields |
+| `400` | Archive download failed | Repository doesn't exist or isn't accessible |
+| `403` | Access denied | Private repo requires `--token` with `repo` scope |
+| `404` | Repository not found | Repository name is wrong |
+| `429` | Rate limit | GitHub API rate limit — add a token to increase limit |
+| `500` | Scan failed | Unexpected error — retry |

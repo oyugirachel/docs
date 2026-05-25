@@ -1,0 +1,114 @@
+---
+title: "CI/CD Scanner"
+description: "Detect security risks in GitHub Actions workflows and CI/CD pipeline configurations."
+---
+
+## Overview
+
+The CI/CD scanner analyzes workflow files (`.github/workflows/*.yml`) and pipeline configurations for security misconfigurations that could allow attackers to compromise your build pipeline.
+
+## What it detects
+
+### Workflow injection
+
+**Severity:** CRITICAL
+
+Using `${{ github.event.pull_request.title }}` or other untrusted inputs directly in `run:` steps can allow an attacker to inject arbitrary shell commands via a malicious PR title or commit message.
+
+```yaml
+# Vulnerable
+- name: Process PR
+  run: echo "${{ github.event.pull_request.title }}"
+
+# Safe — use environment variable intermediary
+- name: Process PR
+  env:
+    PR_TITLE: ${{ github.event.pull_request.title }}
+  run: echo "$PR_TITLE"
+```
+
+### Unpinned actions
+
+**Severity:** HIGH
+
+Using mutable action references (`uses: actions/checkout@v3`) instead of pinned SHAs means an attacker who compromises the action repository can push malicious code that runs in your workflow.
+
+```yaml
+# Vulnerable — mutable tag
+- uses: actions/checkout@v3
+
+# Safe — pinned SHA
+- uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+```
+
+Use [Dependabot](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot) to keep pinned SHAs updated automatically.
+
+### Overprivileged tokens
+
+**Severity:** HIGH
+
+Workflows with `permissions: write-all` or no explicit permissions default to read access to all repository resources.
+
+```yaml
+# Vulnerable
+permissions: write-all
+
+# Secure — minimal permissions
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+### Debug mode in production
+
+**Severity:** MEDIUM
+
+`ACTIONS_STEP_DEBUG: true` or `ACTIONS_RUNNER_DEBUG: true` set in production workflows exposes detailed runner logs that may contain secrets.
+
+```yaml
+# Remove from production workflows
+env:
+  ACTIONS_STEP_DEBUG: true  # FLAG
+```
+
+### Secrets in logs
+
+**Severity:** HIGH
+
+Using `echo ${{ secrets.MY_SECRET }}` in a run step will print the secret to workflow logs — even though GitHub partially masks known secret values, the masking can be bypassed.
+
+```yaml
+# Never echo secrets directly
+- run: echo "${{ secrets.API_KEY }}"  # Insecure
+
+# Pass secrets via environment variables only
+- name: Use secret
+  env:
+    API_KEY: ${{ secrets.API_KEY }}
+  run: ./deploy.sh  # Access via $API_KEY inside the script
+```
+
+## Sample output
+
+```
+╭──────────────────────────────────────────────────────────────╮
+│  ZenVeil CI/CD Scan                                          │
+│  Target: /home/user/my-app/.github/workflows                 │
+╰──────────────────────────────────────────────────────────────╯
+
+┌──────────┬──────────┬─────────┬──────────────────────────────────────────────┐
+│ ID       │ Severity │ Scanner │ Title                                        │
+├──────────┼──────────┼─────────┼──────────────────────────────────────────────┤
+│ ZG-T1U2  │ CRITICAL │ cicd    │ Workflow injection via PR title              │
+│ ZG-V3W4  │ HIGH     │ cicd    │ Unpinned action (actions/checkout@v3)        │
+│ ZG-X5Y6  │ HIGH     │ cicd    │ Overprivileged workflow token                │
+└──────────┴──────────┴─────────┴──────────────────────────────────────────────┘
+
+3 finding(s) · CRITICAL: 1 · HIGH: 2
+```
+
+## Security resources
+
+- [GitHub Actions security hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
+- [Keeping GitHub Actions pinned](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions)
+- [StepSecurity Harden-Runner](https://github.com/step-security/harden-runner) — runtime monitoring for GitHub Actions

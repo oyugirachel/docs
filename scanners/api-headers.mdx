@@ -1,0 +1,129 @@
+---
+title: "API Headers Scanner"
+description: "Detect missing security headers and CORS misconfigurations on live API endpoints."
+---
+
+## Overview
+
+The API headers scanner makes an HTTP request to your API and checks the response headers against security best practices. It runs on `scan api` targets.
+
+## Usage
+
+```bash
+zenveil scan api https://api.your-app.com
+```
+
+## Headers checked
+
+| Header | Finding | Severity |
+|---|---|---|
+| `Strict-Transport-Security` | Missing HSTS | HIGH |
+| `Content-Security-Policy` | Missing CSP | HIGH |
+| `X-Content-Type-Options` | Missing MIME protection | MEDIUM |
+| `X-Frame-Options` | Missing clickjacking protection | MEDIUM |
+| `Referrer-Policy` | Missing referrer policy | MEDIUM |
+| `Permissions-Policy` | Missing permissions policy | LOW |
+| `X-XSS-Protection` | Missing legacy XSS protection | LOW |
+| `Access-Control-Allow-Origin: *` | Wildcard CORS | HIGH |
+
+## Header recommendations
+
+### Strict-Transport-Security (HSTS)
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+Tells browsers to only connect over HTTPS. Without this, a man-in-the-middle attack can downgrade the connection to HTTP.
+
+### Content-Security-Policy
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'
+```
+
+Controls what resources the browser is allowed to load. Prevents XSS by restricting inline scripts and external resource loading.
+
+### X-Content-Type-Options
+
+```
+X-Content-Type-Options: nosniff
+```
+
+Prevents MIME type sniffing. Without this, browsers may interpret files as executable content even when served with a safe MIME type.
+
+### X-Frame-Options
+
+```
+X-Frame-Options: DENY
+```
+
+Prevents your app from being embedded in iframes, blocking clickjacking attacks.
+
+### Referrer-Policy
+
+```
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+Controls how much referrer information is sent with requests. Without this, sensitive URL parameters may leak to third parties.
+
+## Express.js setup (Node.js)
+
+Use `helmet` to set all security headers in one line:
+
+```bash
+npm install helmet
+```
+
+```javascript
+const express = require('express');
+const helmet = require('helmet');
+
+const app = express();
+app.use(helmet()); // Sets all headers above with secure defaults
+```
+
+## FastAPI setup (Python)
+
+```python
+from fastapi import FastAPI
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+
+app = FastAPI()
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+```
+
+## CORS configuration
+
+A wildcard `Access-Control-Allow-Origin: *` allows any website to make requests to your API — including reading the response. This is only safe for public, unauthenticated data.
+
+```javascript
+// Insecure — allows any origin
+app.use(cors({ origin: '*' }));
+
+// Secure — allowlist specific origins
+const allowedOrigins = ['https://app.zenveil.dev', 'https://zenveil.dev'];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+```
+
+<Note>
+The API scanner only tests the response headers of the target URL. It does not attempt authentication, send a request body, or test API logic. For code-level security analysis, use `scan repo`.
+</Note>

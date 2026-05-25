@@ -1,0 +1,62 @@
+---
+title: "POST /v1/triage"
+description: "Stream an AI-generated triage plan for all findings in a scan result."
+---
+
+## Endpoint
+
+```
+POST /v1/triage
+```
+
+Returns a streaming `text/plain` response with a prioritized remediation plan.
+
+## Request
+
+```json
+{
+  "scan": {
+    "scan_id": "a1b2c3",
+    "status": "completed",
+    "target_type": "github",
+    "target": "owner/repo",
+    "started_at": "2026-05-25T09:41:22Z",
+    "completed_at": "2026-05-25T09:41:24Z",
+    "finding_count": 3,
+    "findings": [...]
+  },
+  "api_key": "sk-ant-optional-override"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `scan` | ScanResponse | Yes | The full scan result from `/v1/scan/github` or `/v1/scan/api` |
+| `api_key` | string | No | Override the server's Anthropic API key |
+
+## Response
+
+Streaming `text/plain` — a structured triage report with findings ranked by risk, exploitability, and remediation effort.
+
+## Example
+
+```python
+import httpx
+
+# First, get a scan result
+scan_response = httpx.post(
+    "https://api.zenveil.dev/v1/scan/github",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={"repository": "owner/repo"},
+).json()
+
+# Then triage all findings
+with httpx.stream(
+    "POST",
+    "https://api.zenveil.dev/v1/triage",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={"scan": scan_response},
+) as response:
+    for chunk in response.iter_text():
+        print(chunk, end="", flush=True)
+```

@@ -1,0 +1,171 @@
+---
+title: "CI/CD Integration"
+description: "Add ZenVeil security gates to GitHub Actions, GitLab CI, and any other CI/CD platform."
+---
+
+## Overview
+
+ZenVeil's exit code design makes it a drop-in security gate for any CI/CD pipeline:
+
+- **Exit 0** — scan passed (no CRITICAL or HIGH findings)
+- **Exit 1** — security gate triggered (CRITICAL or HIGH findings exist)
+- **Exit 2** — error (bad input, network failure, no cached scan)
+
+## GitHub Actions
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  zenveil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install zenveil
+
+      - name: Scan
+        env:
+          ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+        run: zenveil scan repo . --json results.json
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-results
+          path: results.json
+```
+
+## GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+security-scan:
+  image: python:3.11-slim
+  stage: test
+  before_script:
+    - pip install zenveil
+  script:
+    - zenveil scan repo . --json security-results.json
+  artifacts:
+    when: always
+    paths:
+      - security-results.json
+    expire_in: 30 days
+  variables:
+    ZENVEIL_API_KEY: $ZENVEIL_API_KEY
+```
+
+## Bitbucket Pipelines
+
+```yaml
+# bitbucket-pipelines.yml
+pipelines:
+  default:
+    - step:
+        name: Security Scan
+        image: python:3.11
+        script:
+          - pip install zenveil
+          - zenveil scan repo . --json security-results.json
+        artifacts:
+          - security-results.json
+```
+
+## CircleCI
+
+```yaml
+# .circleci/config.yml
+version: 2.1
+jobs:
+  security:
+    docker:
+      - image: cimg/python:3.11
+    steps:
+      - checkout
+      - run:
+          name: Install ZenVeil
+          command: pip install zenveil
+      - run:
+          name: Security Scan
+          command: zenveil scan repo . --json security-results.json
+          environment:
+            ZENVEIL_API_KEY: $ZENVEIL_API_KEY
+      - store_artifacts:
+          path: security-results.json
+```
+
+## Docker-based pipeline
+
+For any Docker-based CI system:
+
+```dockerfile
+FROM python:3.11-slim
+RUN pip install zenveil
+WORKDIR /scan
+ENTRYPOINT ["zenveil", "scan", "repo", "."]
+```
+
+```bash
+docker run --rm \
+  -v $(pwd):/scan \
+  -e ZENVEIL_API_KEY=$ZENVEIL_API_KEY \
+  zenveil-scanner
+```
+
+## Recommended pipeline stages
+
+```
+┌────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│    lint    │ →  │  unit tests  │ →  │  zenveil     │ →  │    deploy    │
+│            │    │              │    │  security    │    │              │
+└────────────┘    └──────────────┘    │  gate        │    └──────────────┘
+                                      └──────────────┘
+                                      Exits 1 if CRITICAL/HIGH
+```
+
+Place ZenVeil before deployment, after unit tests. This way:
+- Fast feedback — developers see security issues before code ships
+- No deployment blocking from LOW/MEDIUM findings — only CRITICAL/HIGH gates
+- Artifacts stored for audit trails
+
+## Environment variables in CI
+
+| Variable | Where to set | Notes |
+|---|---|---|
+| `ZENVEIL_API_KEY` | CI secrets | Required |
+| `GITHUB_TOKEN` | CI secrets or auto-provided | For GitHub scanning and auto-PR |
+| `ANTHROPIC_API_KEY` | CI secrets | Only for explain/fix/triage in CI |
+
+## Scheduled scans
+
+Run ZenVeil on a schedule to catch newly disclosed CVEs:
+
+```yaml
+# GitHub Actions scheduled scan
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9am UTC
+```
+
+```yaml
+# With CVE checks and Slack notification
+- name: Weekly security scan
+  run: |
+    zenveil scan repo . --check-cves --json weekly-scan.json
+    if [ $? -eq 1 ]; then
+      echo "Critical findings detected — alerting team"
+      # pipe to Slack, email, or ticketing system
+    fi
+```

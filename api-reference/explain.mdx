@@ -1,0 +1,102 @@
+---
+title: "POST /v1/explain"
+description: "Stream an AI explanation of a security finding."
+---
+
+## Endpoint
+
+```
+POST /v1/explain
+```
+
+Returns a streaming `text/plain` response.
+
+## Request
+
+### Body
+
+```json
+{
+  "finding": {
+    "id": "ZG-A1B2C3",
+    "category": "secrets",
+    "severity": "CRITICAL",
+    "title": "AWS access key",
+    "description": "Potential secret or sensitive credential found in repository source.",
+    "evidence": "AWS access key pattern matched; secret value redacted.",
+    "location": {
+      "target": "owner/repo",
+      "path": "src/config.js",
+      "line": 14,
+      "column": 23
+    },
+    "scanner_name": "secrets",
+    "remediation": "Revoke the AWS key and load it from a secret manager.",
+    "confidence": 0.95,
+    "owasp_categories": ["A02:2021"]
+  },
+  "api_key": "sk-ant-optional-override"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `finding` | FindingSchema | Yes | The finding to explain (from a scan response) |
+| `api_key` | string | No | Override the server's Anthropic API key |
+
+## Response
+
+Streaming `text/plain`. Read incrementally.
+
+```
+An AWS access key (AKIA...) was found committed in plain text at
+src/config.js:14. AWS access keys grant programmatic access to your
+AWS account...
+```
+
+## Examples
+
+<CodeGroup>
+```python Python
+import httpx
+
+# Assume `finding` is a dict from a prior scan response
+with httpx.stream(
+    "POST",
+    "https://api.zenveil.dev/v1/explain",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={"finding": finding},
+) as response:
+    for chunk in response.iter_text():
+        print(chunk, end="", flush=True)
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.zenveil.dev/v1/explain', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'zvk_live_your_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ finding }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  process.stdout.write(decoder.decode(value));
+}
+```
+</CodeGroup>
+
+## Streaming error sentinel
+
+If the AI provider is unavailable, the stream may return:
+
+```
+[ZENVEIL_ERROR]Our AI engine is currently at capacity. Please wait a moment and try again.
+```
+
+Always check streaming chunks for the `[ZENVEIL_ERROR]` prefix and surface the message to the user.

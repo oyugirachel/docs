@@ -1,0 +1,90 @@
+---
+title: "Data Privacy"
+description: "What data ZenVeil collects, how it's stored, and how long it's retained."
+---
+
+## Core principle: scan locally, share minimally
+
+ZenVeil is designed so that the most sensitive operation — scanning your source code — happens entirely on your machine. Your code never touches our servers during a local scan.
+
+## What we collect
+
+### When you use the CLI locally
+
+| Data | Collected? | Where |
+|---|---|---|
+| Your source code | No | Stays on your machine |
+| Finding details (local scan) | No | Stored in `.zenveil-last-scan.json` locally |
+| CLI commands | No | No telemetry |
+| Errors/crashes | No | No crash reporting by default |
+
+### When you use the dashboard or API
+
+| Data | Collected? | Stored where | Retention |
+|---|---|---|---|
+| Email address | Yes | MongoDB Atlas | Until account deletion |
+| Billing information | Via Stripe | Stripe (not our DB) | Per Stripe policy |
+| Scan results (API/dashboard) | Yes | MongoDB Atlas | 30 days (Free), 90 days (Pro) |
+| API key hashes | Yes | MongoDB Atlas | Until revoked |
+| Stripe webhook events | Yes | MongoDB Atlas | 30 days |
+
+### When you use AI features
+
+When you call `explain`, `fix`, or `triage`:
+
+| Data | Sent to | Retained by ZenVeil |
+|---|---|---|
+| Finding title & description | Anthropic/Google | No |
+| Redacted evidence | Anthropic/Google | No |
+| File path & line number | Anthropic/Google | No |
+| Your source code | Not sent | N/A |
+| Real secret values | Not sent (redacted first) | N/A |
+
+Anthropic's and Google's data retention policies apply to these requests. See:
+- [Anthropic's Privacy Policy](https://www.anthropic.com/privacy)
+- [Google's Privacy Policy](https://policies.google.com/privacy)
+
+## Data storage
+
+All ZenVeil data is stored in:
+- **MongoDB Atlas** — hosted in AWS US-East-1, encrypted at rest and in transit (TLS 1.2+)
+- **Stripe** — for billing data. ZenVeil stores only `customerId` and `subscriptionId`, not card details
+
+## Data deletion
+
+**Deleting your account** removes:
+- Your user record
+- All API keys
+- All scan history stored on our servers
+- Your subscription (effective at period end)
+
+To request account deletion: email `privacy@zenveil.dev`.
+
+**Deleting local data:**
+
+```bash
+# Remove scan cache
+rm -f .zenveil-last-scan.json .zenveil-ignore.json .zenveil-feedback.json
+
+# Remove credentials
+rm -rf ~/.zenveil
+```
+
+## GDPR / CCPA compliance
+
+ZenVeil complies with GDPR and CCPA:
+- **Right to access**: request a copy of your data at `privacy@zenveil.dev`
+- **Right to deletion**: request deletion at `privacy@zenveil.dev`
+- **Right to portability**: your scan history can be exported as JSON from the dashboard
+- **Data minimization**: we collect only what's necessary to operate the service
+
+## Third-party services
+
+| Service | Purpose | Link |
+|---|---|---|
+| Stripe | Billing & subscriptions | [stripe.com/privacy](https://stripe.com/privacy) |
+| Clerk | Authentication | [clerk.com/privacy](https://clerk.com/privacy) |
+| Anthropic | AI analysis | [anthropic.com/privacy](https://www.anthropic.com/privacy) |
+| Google | AI fallback (Gemini) | [policies.google.com/privacy](https://policies.google.com/privacy) |
+| Render | Hosting | [render.com/privacy](https://render.com/privacy) |
+| MongoDB Atlas | Database | [mongodb.com/privacy](https://www.mongodb.com/legal/privacy) |

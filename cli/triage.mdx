@@ -1,0 +1,109 @@
+---
+title: "zenveil triage"
+description: "Get an AI-generated, risk-prioritized remediation plan for all findings from the last scan."
+---
+
+## Overview
+
+`zenveil triage` analyzes all findings from the last scan and produces a prioritized remediation plan — ordered by risk, exploitability, and estimated effort. Unlike `explain` (which covers one finding), `triage` gives you the full picture.
+
+## Usage
+
+```bash
+zenveil triage [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|---|---|
+| `--api-key <key>` | Anthropic API key. Defaults to `ANTHROPIC_API_KEY` env var. |
+
+## Examples
+
+```bash
+# Triage all findings from the last scan
+zenveil triage
+
+# Use a specific API key
+zenveil triage --api-key sk-ant-your_key
+```
+
+## Sample output
+
+```
+Triaging 5 finding(s)…
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ZenVeil Security Triage Report
+Target: /home/user/my-api · 5 findings
+
+PRIORITY ORDER (highest risk first)
+════════════════════════════════════
+
+1. ZG-A1B2 — AWS access key [CRITICAL]
+   Risk: Immediate. An exposed AWS key gives attackers full API access.
+   Effort: 15 minutes
+   Action: Revoke the key in IAM now, then run:
+     git rm --cached src/config.js
+     git commit -m "Remove exposed AWS key"
+   Then store the key in AWS Secrets Manager or environment variables.
+
+2. ZG-C3D4 — .env file committed [HIGH]
+   Risk: High. Any credentials in .env are now in git history — even
+   after deletion. Anyone with repo access can see them.
+   Effort: 30 minutes
+   Action: 
+     git rm --cached .env
+     echo ".env" >> .gitignore
+     git commit -m "Remove .env from tracking"
+   Then rotate ALL credentials that were in the .env file.
+
+3. ZG-E5F6 — Token stored in browser storage [HIGH]
+   Risk: High if XSS exists anywhere on the app. Medium otherwise.
+   Effort: 2–4 hours (requires server-side session rewrite)
+   Action: Migrate to httpOnly, Secure, SameSite cookies issued by the
+   server. See `zenveil explain ZG-E5F6` for code examples.
+
+4. ZG-G7H8 — Missing lockfile [HIGH]
+   Risk: Medium-High. Floating dependencies can pull in compromised
+   packages during CI builds.
+   Effort: 5 minutes
+   Action:
+     npm install  # generates package-lock.json
+     git add package-lock.json
+     git commit -m "Add npm lockfile"
+
+5. ZG-I9J0 — Debug mode enabled [MEDIUM]
+   Risk: Low if not in production; High if this ships to prod.
+   Effort: 5 minutes
+   Action: Remove NODE_ENV=development from production config and use
+   environment-specific configuration files.
+
+SUMMARY
+═══════
+Fix ZG-A1B2 and ZG-C3D4 immediately — these are active credential
+exposures. ZG-G7H8 is a 5-minute win. ZG-E5F6 requires a session
+architecture change; schedule for next sprint. ZG-I9J0 is safe in
+development but add a production env check.
+
+Estimated total remediation time: 3–5 hours
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+## When to use triage vs explain
+
+| Use case | Command |
+|---|---|
+| Understand one specific vulnerability | `zenveil explain <id>` |
+| Get a full remediation plan across all findings | `zenveil triage` |
+| Discuss findings interactively | `zenveil agent` |
+| Generate a code fix | `zenveil fix <id>` |
+
+## Tips
+
+- Run triage after every significant scan to get a fresh prioritization
+- Use the triage output in sprint planning to assign remediation work
+- Copy the triage output into your issue tracker (Jira, Linear, GitHub Issues)
+- Triage works best with 5–20 findings; for very large scans, use `zenveil list --severity critical,high` first to filter

@@ -1,0 +1,120 @@
+---
+title: "zenveil report"
+description: "Export the last scan results to JSON or HTML for sharing, archiving, or integration."
+---
+
+## Overview
+
+`zenveil report` exports the cached scan results (from `.zenveil-last-scan.json`) to a structured JSON file or a shareable HTML report.
+
+## Usage
+
+```bash
+zenveil report <format> <output_file>
+```
+
+## Subcommands
+
+### JSON export
+
+```bash
+zenveil report json <output_file>
+```
+
+Writes the full scan result as structured JSON. Useful for:
+- Integrating with other tools (SIEMs, dashboards, ticket systems)
+- Archiving scan history
+- CI/CD artifact storage
+
+```bash
+# Export to a dated file
+zenveil report json security-scan-$(date +%Y%m%d).json
+
+# Export to a fixed filename for CI artifacts
+zenveil report json zenveil-results.json
+```
+
+#### JSON schema
+
+```json
+{
+  "scan_id": "a1b2c3d4e5f6",
+  "status": "completed",
+  "target_type": "repo",
+  "target": "/home/user/my-app",
+  "started_at": "2026-05-25T09:41:22Z",
+  "completed_at": "2026-05-25T09:41:24Z",
+  "finding_count": 3,
+  "findings": [
+    {
+      "id": "ZG-A1B2C3",
+      "category": "secrets",
+      "severity": "CRITICAL",
+      "title": "AWS access key",
+      "description": "Potential secret or sensitive credential found in repository source.",
+      "evidence": "AWS access key pattern matched; secret value redacted.",
+      "location": {
+        "target": "/home/user/my-app",
+        "path": "src/config.js",
+        "line": 14,
+        "column": 23,
+        "url": null,
+        "method": null
+      },
+      "scanner_name": "secrets",
+      "remediation": "Revoke the AWS key, remove it from the repository, and load it from a secret manager or environment variable.",
+      "confidence": 0.95,
+      "owasp_categories": ["A02:2021"]
+    }
+  ]
+}
+```
+
+### HTML export
+
+```bash
+zenveil report html <output_file>
+```
+
+Writes a self-contained, styled HTML report. Useful for:
+- Sharing scan results with non-technical stakeholders
+- Security audit documentation
+- Pull request descriptions
+
+```bash
+zenveil report html security-report.html
+# Open in browser
+open security-report.html
+```
+
+## Writing reports during scanning
+
+You can also write reports inline during a scan:
+
+```bash
+# Write JSON during scan
+zenveil scan repo . --json results.json
+
+# Write JSON during GitHub scan
+zenveil scan github owner/repo --json scan.json
+```
+
+## Use in CI/CD
+
+```yaml
+# GitHub Actions example
+- name: Security Scan
+  run: |
+    zenveil scan repo . --json zenveil-results.json
+
+- name: Upload scan report
+  uses: actions/upload-artifact@v4
+  with:
+    name: security-scan
+    path: zenveil-results.json
+```
+
+## Prerequisites
+
+- Run `zenveil scan` first — `report` reads from the local cache (`.zenveil-last-scan.json`)
+- If no scan has been run, you'll see: `No cached scan found. Run zenveil scan repo <path> first.`

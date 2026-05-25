@@ -1,0 +1,109 @@
+---
+title: "ZenVeil Documentation"
+description: "AI-powered security scanning for every developer. Detect secrets, vulnerabilities, and supply chain risks — and fix them automatically."
+---
+
+```bash
+# Install, scan, and fix — in three commands
+pip install zenveil
+zenveil login
+zenveil scan repo .
+
+# ╭─────────────────────────────────────────────────────────╮
+# │  ZenVeil · 4 findings · CRITICAL: 1 · HIGH: 2          │
+# │                                                         │
+# │  ZG-A1B2  CRITICAL  AWS access key      config.js:14   │
+# │  ZG-C3D4  HIGH      .env committed      .env            │
+# │  ZG-E5F6  HIGH      Token in storage    login.js:47    │
+# │  ZG-G7H8  MEDIUM    Debug mode enabled  app.js:3        │
+# ╰─────────────────────────────────────────────────────────╯
+
+zenveil fix ZG-A1B2 --auto-pr --repo owner/repo
+# Opened pull request: https://github.com/owner/repo/pull/42
+```
+
+## The security scanner that fixes itself
+
+ZenVeil scans your repositories, APIs, and CI/CD pipelines for secrets, OWASP vulnerabilities, and supply chain risks — then uses AI to explain every finding and generate production-ready remediation pull requests. No security team required.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start — 60 seconds"
+    icon="bolt"
+    href="/quickstart"
+    color="#A78BFA"
+  >
+    Install ZenVeil, run your first scan, get your first finding fixed. One copy-paste away.
+  </Card>
+  <Card
+    title="Why ZenVeil?"
+    icon="shield-halved"
+    href="/why-zenveil"
+    color="#38BDF8"
+  >
+    The case for autonomous security remediation in a world of AI-generated code.
+  </Card>
+  <Card
+    title="CLI Reference"
+    icon="terminal"
+    href="/cli/overview"
+    color="#34D399"
+  >
+    Every command, every flag, every option — with real examples and sample output.
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/overview"
+    color="#FB923C"
+  >
+    Integrate ZenVeil directly into your platform. REST API with streaming AI responses.
+  </Card>
+</CardGroup>
+
+## What ZenVeil catches
+
+<CardGroup cols={3}>
+  <Card title="Secrets & Credentials" icon="key">
+    AWS keys, GitHub tokens, private keys, JWT tokens, hardcoded passwords — with sub-millisecond detection.
+  </Card>
+  <Card title="OWASP Top 10" icon="bug">
+    Broken auth, IDOR, XSS vectors, open redirects, injection paths, insecure deserialization.
+  </Card>
+  <Card title="Supply Chain Risks" icon="link-slash">
+    Dependency confusion, floating versions, missing lockfiles, known CVEs via OSV.dev.
+  </Card>
+  <Card title="API Security" icon="globe">
+    Missing security headers, CORS misconfigurations, exposed endpoints and HTTP downgrade paths.
+  </Card>
+  <Card title="CI/CD Risks" icon="arrows-spin">
+    Workflow injection, unpinned actions, overprivileged tokens, debug mode in production.
+  </Card>
+  <Card title="AI Remediation" icon="wand-magic-sparkles">
+    Claude-powered explanations, fix suggestions, and automatic GitHub PR creation.
+  </Card>
+</CardGroup>
+
+## First win in three commands
+
+```bash
+pip install zenveil
+zenveil login
+zenveil scan repo .
+```
+
+That's it. ZenVeil scans your current repository, surfaces every finding with severity, OWASP category, evidence, and an AI-generated fix — right in your terminal.
+
+<Note>
+ZenVeil works offline for local scans. Network access is only needed for GitHub scanning, CVE lookups via OSV.dev, and AI-powered analysis (explain/fix/triage).
+</Note>
+
+## Trusted by security-conscious teams
+
+ZenVeil is built for developers who want security without friction — from solo founders shipping fast to platform teams enforcing DevSecOps at scale.
+
+- **Zero config scanning** — point it at any directory and go
+- **Git-native** — findings link directly to file, line, and column
+- **AI-native** — every finding has an explanation, a fix, and optionally a PR
+- **Privacy-first** — no code leaves your machine during local scans
+- **CI-ready** — exits with code 1 on critical/high findings, perfect for gates

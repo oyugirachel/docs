@@ -1,0 +1,137 @@
+---
+title: "API Key Handling"
+description: "Best practices for storing and using ZenVeil, GitHub, and Anthropic API keys securely."
+---
+
+## The golden rule
+
+**Never commit API keys to source control.** Not even in private repositories. Not even "temporarily." Not in comments. Not in test files. ZenVeil will catch this — and so will attackers.
+
+## ZenVeil API key
+
+### Where to store it
+
+<CodeGroup>
+```bash Local development
+# In your shell profile (~/.zshrc or ~/.bashrc)
+export ZENVEIL_API_KEY="zvk_live_your_key_here"
+
+# Reload
+source ~/.zshrc
+```
+
+```bash .env file (local only)
+# .env — make sure this is in .gitignore
+ZENVEIL_API_KEY=zvk_live_your_key_here
+```
+
+```yaml GitHub Actions
+# Settings → Secrets and variables → Actions → New repository secret
+# Name: ZENVEIL_API_KEY
+# Value: zvk_live_your_key_here
+
+- name: Scan
+  env:
+    ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+  run: zenveil scan repo .
+```
+
+```yaml GitLab CI
+# Settings → CI/CD → Variables → Add variable
+# Key: ZENVEIL_API_KEY, Protected: Yes, Masked: Yes
+security-scan:
+  variables:
+    ZENVEIL_API_KEY: $ZENVEIL_API_KEY
+  script:
+    - zenveil scan repo .
+```
+</CodeGroup>
+
+### What to never do
+
+```python
+# NEVER hardcode in source
+api_key = "zvk_live_a1b2c3d4..."   # ZenVeil will flag this as CRITICAL
+
+# NEVER commit .env files
+# Add to .gitignore:
+# .env
+# .env.*
+# !.env.example
+
+# NEVER log the key
+print(f"Using key: {api_key}")     # Appears in CI logs
+
+# NEVER put in URLs
+# https://api.zenveil.dev/v1/scan?key=zvk_live_...  # Logged by proxies
+```
+
+## GitHub token
+
+### Minimum required scopes
+
+| Operation | Scope |
+|---|---|
+| Scan public repository | None (no token needed) |
+| Scan private repository | `repo` |
+| Open pull requests | `repo` |
+| Scan public repos only | `public_repo` |
+
+Use the minimum scope for your use case. A token with `repo` scope can read all your private repositories — don't create one for scanning-only use cases.
+
+### Fine-grained tokens (recommended)
+
+GitHub's fine-grained personal access tokens let you scope access to specific repositories:
+
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens)
+2. Generate new token → Fine-grained token
+3. Set **Repository access** → Only select repositories → choose your target
+4. Set **Permissions → Contents → Read-only** (for scanning)
+5. Add **Pull requests → Read and write** (only if using auto-PR)
+
+### Token rotation
+
+Rotate your GitHub token every 90 days. To rotate:
+1. Generate a new token
+2. Update it in your CI/CD secrets and local environment
+3. Revoke the old token at [github.com/settings/tokens](https://github.com/settings/tokens)
+
+## Anthropic API key
+
+The Anthropic API key is used only for AI-powered commands (`explain`, `fix`, `triage`, `agent`). It's optional — local scanning works without it.
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-your_key_here"
+```
+
+ZenVeil uses this key to call Anthropic's API. The key is passed via the `Authorization` header in HTTPS requests — it's never logged, stored, or transmitted to ZenVeil servers.
+
+### Usage limits
+
+Monitor usage at [console.anthropic.com](https://console.anthropic.com). Set monthly spending limits to prevent unexpected charges.
+
+## Security checklist
+
+<AccordionGroup>
+  <Accordion title="✓ .gitignore includes .env" icon="check">
+    ```
+    # .gitignore
+    .env
+    .env.*
+    !.env.example
+    ```
+    ZenVeil's secrets scanner will flag a missing `.env` in `.gitignore` as MEDIUM severity.
+  </Accordion>
+  <Accordion title="✓ CI secrets are masked" icon="check">
+    GitHub Actions automatically masks values of secrets in logs. GitLab allows you to mark variables as Masked. Always enable masking for API keys.
+  </Accordion>
+  <Accordion title="✓ Keys are rotated regularly" icon="check">
+    Set a calendar reminder to rotate API keys every 90 days. GitHub supports token expiration — use it.
+  </Accordion>
+  <Accordion title="✓ Old keys are revoked" icon="check">
+    When rotating, revoke the old key immediately. A valid old key is a live credential even after you stop using it.
+  </Accordion>
+  <Accordion title="✓ Keys are scoped minimally" icon="check">
+    Use fine-grained GitHub tokens scoped to specific repos. Don't use personal access tokens with broad access for CI.
+  </Accordion>
+</AccordionGroup>

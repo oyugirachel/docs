@@ -1,0 +1,216 @@
+---
+title: "zenveil scan"
+description: "Scan local repositories, GitHub repos, and API endpoints for security vulnerabilities."
+---
+
+## Overview
+
+`zenveil scan` is the primary command. It dispatches the appropriate scanners based on the target type and returns a prioritized list of findings.
+
+## Scan a local repository
+
+```bash
+zenveil scan repo <path>
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `path` | Path to the local repository or directory |
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--check-cves` | Query [OSV.dev](https://osv.dev) for known CVEs in pinned dependencies. Adds ~2–5 seconds. |
+| `--json <file>` | Write scan results to a JSON file in addition to terminal output |
+
+### Examples
+
+```bash
+# Scan current directory
+zenveil scan repo .
+
+# Scan a specific project
+zenveil scan repo ~/projects/my-api
+
+# Scan with CVE checks
+zenveil scan repo . --check-cves
+
+# Write results to JSON
+zenveil scan repo . --json results.json
+
+# All flags combined
+zenveil scan repo . --check-cves --json scan-$(date +%Y%m%d).json
+```
+
+### Sample output
+
+```
+╭──────────────────────────────────────────────────────────────────────╮
+│  ZenVeil Security Scan                                               │
+│  Target: /home/user/my-api  ·  2 scanner(s) active                  │
+│  Started: 2026-05-25T09:41:22Z  ·  Completed: 2026-05-25T09:41:24Z  │
+╰──────────────────────────────────────────────────────────────────────╯
+
+┌──────────┬──────────┬───────────────┬─────────────────────────────────────────┬─────────────────────┐
+│ ID       │ Severity │ Scanner       │ Title                                   │ Location            │
+├──────────┼──────────┼───────────────┼─────────────────────────────────────────┼─────────────────────┤
+│ ZG-A1B2  │ CRITICAL │ secrets       │ AWS access key                          │ src/config.js:14    │
+│ ZG-C3D4  │ HIGH     │ secrets       │ .env file committed to repository       │ .env                │
+│ ZG-E5F6  │ HIGH     │ secrets       │ Token stored in browser storage         │ src/auth/login.js:8 │
+│ ZG-G7H8  │ HIGH     │ supply_chain  │ Missing lockfile                        │ package.json        │
+│ ZG-I9J0  │ MEDIUM   │ secrets       │ Debug mode enabled                      │ config/app.js:3     │
+└──────────┴──────────┴───────────────┴─────────────────────────────────────────┴─────────────────────┘
+
+5 finding(s) · CRITICAL: 1 · HIGH: 3 · MEDIUM: 1
+
+Run `zenveil explain <id>` for AI analysis.
+Run `zenveil fix <id> --auto-pr --repo owner/repo` to open a GitHub PR.
+```
+
+### What the secrets scanner checks
+
+- **Hardcoded credentials** — AWS keys, GitHub tokens, Slack tokens, private key blocks, hardcoded passwords, API keys, JWT tokens
+- **Environment file hygiene** — `.env` files committed to the repo, missing `.env*` in `.gitignore`
+- **OWASP patterns** — XSS-accessible token storage, predictable JWT secrets, client-side admin gates, weak password hashing, debug mode, open redirects, long-lived sessions
+
+### What the supply chain scanner checks
+
+- **Missing lockfiles** — `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Pipfile.lock`, `poetry.lock`
+- **Floating npm versions** — `^`, `~`, `*`, `latest` ranges that allow breaking updates
+- **Dependency confusion** — internal package names that could be squatted on public registries
+- **Known CVEs** — OSV.dev lookups for pinned versions (requires `--check-cves`)
+
+---
+
+## Scan a GitHub repository
+
+```bash
+zenveil scan github <repository>
+```
+
+Scan any GitHub repository without cloning it. ZenVeil downloads the archive, scans it in a temporary directory, and deletes it — no code is stored.
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `repository` | `owner/repo`, `https://github.com/owner/repo`, or `git@github.com:owner/repo` |
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--token <tok>` | GitHub personal access token. Defaults to `GITHUB_TOKEN` env var. Required for private repos. |
+| `--ref <ref>` | Branch, tag, or commit SHA to scan. Defaults to the default branch. |
+| `--check-cves` | Query OSV.dev for known CVEs |
+| `--json <file>` | Write results to JSON |
+| `--auto-pr-low` | Open a pull request if all findings are LOW severity |
+
+### Examples
+
+```bash
+# Scan a public repository
+zenveil scan github torvalds/linux
+
+# Scan using a full URL
+zenveil scan github https://github.com/owner/repo
+
+# Scan a private repository with a token
+zenveil scan github owner/private-repo --token ghp_your_token
+
+# Scan a specific branch
+zenveil scan github owner/repo --ref feature/new-auth
+
+# Scan a specific commit
+zenveil scan github owner/repo --ref abc123def456
+
+# With CVE checks and JSON output
+zenveil scan github owner/repo --check-cves --json github-scan.json
+
+# Auto-open PR if only low severity findings
+zenveil scan github owner/repo --auto-pr-low
+```
+
+### GitHub token permissions
+
+| Use case | Required scope |
+|---|---|
+| Public repo scanning | None (no token needed) |
+| Private repo scanning | `repo` |
+| Opening pull requests | `repo` |
+| Read-only scanning (public) | `public_repo` |
+
+Create a token with minimum required scopes at [github.com/settings/tokens/new](https://github.com/settings/tokens/new).
+
+### Rate limits
+
+Without a token, GitHub allows ~60 requests/hour. With a token, this increases to ~5,000. For CI/CD pipelines, always set `GITHUB_TOKEN`.
+
+---
+
+## Scan an API endpoint
+
+```bash
+zenveil scan api <url>
+```
+
+Scan an HTTP API for security header misconfigurations.
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `url` | API base URL (must be publicly accessible) |
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--json <file>` | Write results to JSON |
+
+### What it checks
+
+- `Strict-Transport-Security` — HSTS presence and configuration
+- `X-Content-Type-Options` — MIME sniffing protection
+- `X-Frame-Options` — clickjacking protection
+- `Content-Security-Policy` — XSS policy
+- `Referrer-Policy` — referrer information leakage
+- `Permissions-Policy` — browser feature control
+- `X-XSS-Protection` — legacy XSS filter header
+- CORS misconfiguration — wildcard `Access-Control-Allow-Origin`
+
+### Examples
+
+```bash
+# Scan your API
+zenveil scan api https://api.your-app.com
+
+# Scan with JSON output
+zenveil scan api https://api.your-app.com --json api-headers.json
+```
+
+### Sample output
+
+```
+╭─────────────────────────────────────────────────────────╮
+│  ZenVeil API Scan                                       │
+│  Target: https://api.your-app.com                       │
+╰─────────────────────────────────────────────────────────╯
+
+┌──────────┬──────────┬──────────────┬──────────────────────────────────────────────┐
+│ ID       │ Severity │ Scanner      │ Title                                        │
+├──────────┼──────────┼──────────────┼──────────────────────────────────────────────┤
+│ ZG-H1I2  │ HIGH     │ api_headers  │ Missing Content-Security-Policy              │
+│ ZG-J3K4  │ MEDIUM   │ api_headers  │ Missing X-Frame-Options                      │
+│ ZG-L5M6  │ MEDIUM   │ api_headers  │ Missing Referrer-Policy                      │
+└──────────┴──────────┴──────────────┴──────────────────────────────────────────────┘
+
+3 finding(s) · HIGH: 1 · MEDIUM: 2
+```
+
+<Note>
+  API scanning only tests publicly reachable endpoints. Private or localhost URLs are blocked (SSRF protection). Use `scan repo` for scanning application code.
+</Note>

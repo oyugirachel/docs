@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Dark background -->
+  <rect width="1200" height="630" fill="#0D1117"/>
+
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#161B22" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0D1117" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Shield icon - large centered -->
+  <path d="M580 140L520 162v80c0 40 28 77 60 88 32-11 60-48 60-88v-80L580 140z" fill="#7C3AED"/>
+  <path d="M580 140L520 162v80c0 40 28 77 60 88 32-11 60-48 60-88v-80L580 140z" fill="url(#shield-grad)" opacity="0.4"/>
+  <path d="M558 258l16 16 32-32" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="shield-grad" x1="520" y1="140" x2="640" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C4B5FD"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ZenVeil wordmark -->
+  <text x="600" y="420" text-anchor="middle" font-family="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-size="80" font-weight="800" letter-spacing="-3" fill="white">Zen<tspan fill="#A78BFA">Veil</tspan></text>
+
+  <!-- Tagline -->
+  <text x="600" y="480" text-anchor="middle" font-family="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-size="28" font-weight="400" fill="#8B949E" letter-spacing="0">AI-powered security scanning that fixes itself</text>
+
+  <!-- Bottom accent line -->
+  <rect x="460" y="530" width="280" height="2" rx="1" fill="url(#line-grad)"/>
+  <defs>
+    <linearGradient id="line-grad" x1="460" y1="0" x2="740" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

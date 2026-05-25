@@ -1,0 +1,104 @@
+---
+title: "Slack Integration"
+description: "Send security scan alerts to Slack channels."
+---
+
+## Overview
+
+ZenVeil can send scan results and finding alerts to Slack channels, keeping your team informed of security issues in real time.
+
+## Setup
+
+### 1. Create a Slack webhook
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps)
+2. Create a new app → From scratch
+3. Enable **Incoming Webhooks**
+4. Add a webhook to your workspace and select the target channel
+5. Copy the webhook URL
+
+### 2. Set the webhook URL
+
+```bash
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/T.../B.../..."
+```
+
+### 3. Pipe scan results to Slack
+
+```bash
+#!/bin/bash
+# scan-and-notify.sh
+
+RESULT=$(zenveil scan repo . --json /tmp/scan.json)
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 1 ]; then
+  CRITICAL=$(python3 -c "import json; d=json.load(open('/tmp/scan.json')); print(sum(1 for f in d['findings'] if f['severity']=='CRITICAL'))")
+  HIGH=$(python3 -c "import json; d=json.load(open('/tmp/scan.json')); print(sum(1 for f in d['findings'] if f['severity']=='HIGH'))")
+
+  curl -X POST $SLACK_WEBHOOK_URL \
+    -H 'Content-type: application/json' \
+    -d "{
+      \"text\": \"🚨 ZenVeil Security Alert\",
+      \"blocks\": [
+        {
+          \"type\": \"section\",
+          \"text\": {
+            \"type\": \"mrkdwn\",
+            \"text\": \"*Security scan found critical issues*\nCRITICAL: ${CRITICAL} · HIGH: ${HIGH}\n<https://app.zenveil.dev|View dashboard>\"
+          }
+        }
+      ]
+    }"
+fi
+```
+
+## GitHub Actions with Slack notification
+
+```yaml
+- name: Security Scan
+  env:
+    ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+  run: |
+    zenveil scan repo . --json results.json
+    echo "SCAN_EXIT=$?" >> $GITHUB_ENV
+
+- name: Notify Slack on failure
+  if: env.SCAN_EXIT == '1'
+  uses: slackapi/slack-github-action@v1
+  with:
+    payload: |
+      {
+        "text": "🚨 Security scan failed on ${{ github.repository }} — ${{ github.ref_name }}",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*ZenVeil found CRITICAL/HIGH security issues*\nRepo: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow>"
+            }
+          }
+        ]
+      }
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+```
+
+## Sample Slack alert
+
+```
+🚨 ZenVeil Security Alert
+
+Security scan found critical issues
+Repository: owner/my-app
+Branch: main
+CRITICAL: 1 · HIGH: 3 · MEDIUM: 2
+
+Top finding:
+  AWS access key — src/config.js:14
+  Revoke this key immediately.
+
+→ View findings in dashboard
+→ View GitHub Actions run
+```

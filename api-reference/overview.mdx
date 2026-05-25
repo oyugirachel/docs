@@ -1,0 +1,130 @@
+---
+title: "API Overview"
+description: "ZenVeil REST API — embed security scanning and AI analysis directly into your platform."
+---
+
+## Base URL
+
+```
+https://api.zenveil.dev
+```
+
+## Authentication
+
+All API requests require an API key in the `X-API-Key` header:
+
+```bash
+curl https://api.zenveil.dev/v1/scan/github \
+  -H "X-API-Key: zvk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"repository": "owner/repo"}'
+```
+
+Get your API key from the [ZenVeil dashboard](https://app.zenveil.dev/settings/api-keys).
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `POST` | `/v1/scan/github` | Scan a GitHub repository |
+| `POST` | `/v1/scan/api` | Scan an API endpoint |
+| `POST` | `/v1/explain` | AI explanation of a finding (streaming) |
+| `POST` | `/v1/fix` | AI-generated fix for a finding (streaming) |
+| `POST` | `/v1/fix/pr` | Open a GitHub PR with a deterministic fix |
+| `POST` | `/v1/triage` | AI-generated triage plan for all findings (streaming) |
+
+## Streaming responses
+
+AI endpoints (`/v1/explain`, `/v1/fix`, `/v1/triage`) return `text/plain` streaming responses. Read the response incrementally:
+
+```python
+import httpx
+
+with httpx.stream("POST", "https://api.zenveil.dev/v1/explain",
+    headers={"X-API-Key": "zvk_live_your_key"},
+    json={"finding": {...}}
+) as response:
+    for chunk in response.iter_text():
+        print(chunk, end="", flush=True)
+```
+
+```javascript
+const response = await fetch('https://api.zenveil.dev/v1/explain', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'zvk_live_your_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ finding: { ... } }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  process.stdout.write(decoder.decode(value));
+}
+```
+
+## Error handling
+
+| Status | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Bad request — invalid input, missing required fields |
+| `401` | Unauthorized — missing or invalid API key |
+| `403` | Forbidden — token lacks required permissions |
+| `404` | Not found — repository doesn't exist or isn't accessible |
+| `429` | Rate limited — slow down requests |
+| `500` | Internal error — scan failed unexpectedly |
+| `503` | AI unavailable — Anthropic API is at capacity |
+
+### Error response format
+
+```json
+{
+  "detail": "Repository not found. Check the name and try again."
+}
+```
+
+### Streaming error sentinel
+
+AI streaming responses may include an error sentinel if the AI provider fails mid-stream:
+
+```
+[ZENVEIL_ERROR]Our AI engine is currently at capacity. Please wait a moment and try again.
+```
+
+Check for `[ZENVEIL_ERROR]` prefix in streaming chunks and surface the message to the user.
+
+## Rate limits
+
+| Plan | Scans/hour | AI requests/hour |
+|---|---|---|
+| Free | 10 | 5 |
+| Pro | 100 | 50 |
+| Team | Unlimited | 200 |
+
+Rate limits are per API key. Billing API calls are additionally limited to 10 requests/hour per key to prevent abuse.
+
+## Interactive API explorer
+
+The scanning API has built-in Swagger UI and ReDoc documentation:
+
+- Swagger UI: `https://api.zenveil.dev/docs`
+- ReDoc: `https://api.zenveil.dev/redoc`
+
+## Health check
+
+```bash
+curl https://api.zenveil.dev/health
+```
+
+```json
+{
+  "status": "ok",
+  "version": "1.0.0"
+}
+```

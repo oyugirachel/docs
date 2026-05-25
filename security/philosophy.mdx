@@ -1,0 +1,135 @@
+---
+title: "Security Philosophy"
+description: "How ZenVeil thinks about security — for its product, its users, and the broader ecosystem."
+---
+
+## We built a security tool. We take security seriously.
+
+ZenVeil scans other people's code for vulnerabilities. That makes us a high-value target. If our tool were compromised, an attacker could use it as a vector to access private repositories, steal secrets, or manipulate scan results. We don't take that lightly.
+
+This page explains how we think about security — in our product, in our handling of your data, and in the broader developer ecosystem.
+
+## Privacy-first scanning architecture
+
+### Local scans never leave your machine
+
+When you run `zenveil scan repo .`, your code is processed entirely on your local machine. No source code, no file contents, no findings are transmitted to ZenVeil servers. The scanner is a local Python process.
+
+The only network requests a local scan makes:
+- **CVE lookups** (`--check-cves`): read-only queries to [osv.dev](https://osv.dev) — a public API with no authentication. Only package names and versions are sent, not your code.
+- **AI analysis** (`explain`, `fix`, `triage`): specific code snippets are sent to Anthropic or Google. See [AI Analysis](#ai-analysis-and-your-code) below.
+
+### GitHub scanning is ephemeral
+
+For `scan github` commands, ZenVeil:
+1. Downloads the repository archive to a temporary directory (`/tmp/zenveil-XXXXXX/`)
+2. Runs all scanners against the extracted files
+3. **Deletes the temporary directory immediately after scanning**
+4. Returns findings to your terminal — no code is stored on ZenVeil servers
+
+### SSRF protection
+
+The API scanner blocks requests to private IP ranges to prevent Server-Side Request Forgery:
+- `127.x.x.x` / `::1` (loopback)
+- `10.x.x.x` (private)
+- `172.16.x.x` – `172.31.x.x` (private)
+- `192.168.x.x` (private)
+- `169.254.x.x` (link-local)
+- IPv6 ULA (`fc00::/7`)
+
+You cannot use ZenVeil to probe internal services or cloud metadata endpoints.
+
+## AI analysis and your code
+
+When you use `explain`, `fix`, or `triage`, the relevant **finding context** (not your full codebase) is sent to Claude (Anthropic) or Gemini (Google) for analysis:
+
+```
+What is sent:
+  - Finding title
+  - Finding description
+  - Evidence (with secret values already redacted)
+  - File path and line number
+  - OWASP category
+  - Remediation guidance
+
+What is NOT sent:
+  - Your full source code
+  - Other findings
+  - Repository name or owner
+  - Your API key
+```
+
+Secret values are always redacted **before** any AI call. The pattern `AKIA[0-9A-Z]{16}` is detected and replaced with `<REDACTED_AWS_ACCESS_KEY>` before the evidence field is constructed. You will never see a real secret in ZenVeil output or AI prompts.
+
+## API key security
+
+### Your ZenVeil API key
+
+- Stored as a bcrypt hash in our database — we cannot recover it if lost
+- Never logged in HTTP access logs
+- Rate-limited: 10 billing requests/hour per key to prevent abuse with stolen keys
+- Revocable instantly from the dashboard
+
+### Your GitHub token
+
+- Never stored by ZenVeil — passed through to the GitHub API for the duration of the scan and discarded
+- If you use `--auto-pr`, the token is used to open one pull request and immediately dropped from memory
+- We recommend using fine-grained tokens with minimum required scopes
+
+### Your Anthropic/Gemini keys
+
+- Never stored by ZenVeil
+- Used only for the duration of the AI request
+- Can be passed per-request (`--api-key`) or set as environment variables — your choice
+
+## Infrastructure security
+
+Our web server and API run on Render with the following hardening:
+
+| Layer | Control |
+|---|---|
+| HTTP headers | `helmet()` — X-Frame-Options, HSTS, X-Content-Type-Options, Referrer-Policy |
+| Rate limiting | 200 req/15min/IP globally; 10 req/15min on auth endpoints |
+| Billing rate limit | 10 req/hr per API key (not just IP) — prevents checkout spam |
+| Trust proxy | Configured for Render's load balancer — `req.ip` is accurate |
+| Webhook idempotency | Stripe event IDs stored with 30-day TTL; duplicate events return 200 safely |
+| Input validation | `express-validator` on all billing routes — prevents NoSQL injection |
+| Database | MongoDB Atlas with TLS, IP allowlist, and least-privilege service accounts |
+
+## Telemetry policy
+
+ZenVeil collects **no telemetry by default**. We do not:
+- Track which files you scan
+- Collect CLI usage metrics without consent
+- Send crash reports without consent
+- Log your scan results on our servers
+
+The dashboard records scan history for your account — but only scans initiated through the dashboard or API, not local CLI scans.
+
+If we add opt-in telemetry in the future, it will be:
+1. Explicitly opt-in (not opt-out)
+2. Fully documented
+3. Anonymized
+4. Never include source code or finding details
+
+## Data retention
+
+| Data type | Retention |
+|---|---|
+| Scan results (dashboard) | 90 days (Pro), 30 days (Free), until deletion (Team) |
+| API keys | Until revoked |
+| Stripe webhook events | 30 days (for idempotency) |
+| GitHub temporary archives | Deleted immediately after scan |
+| AI request payloads | Not stored by ZenVeil (subject to Anthropic/Google policies) |
+
+## Responsible disclosure
+
+Found a vulnerability in ZenVeil? We want to know. See our [Responsible Disclosure Policy](/security/responsible-disclosure).
+
+**Short version:** Email `security@zenveil.dev`. We respond within 24 hours, patch within 7 days for critical issues, and credit you publicly if you want.
+
+## Security contacts
+
+- Security reports: `security@zenveil.dev` (PGP key available on request)
+- General support: `support@zenveil.dev`
+- Status page: [status.zenveil.dev](https://status.zenveil.dev)

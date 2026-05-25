@@ -1,0 +1,171 @@
+---
+title: "GitHub Integration"
+description: "Scan GitHub repositories, auto-open PRs with fixes, and gate pull requests on security findings."
+---
+
+## Overview
+
+ZenVeil has deep GitHub integration — scan any repository, automatically remediate findings with pull requests, and add security gates to your CI/CD pipeline.
+
+## Scanning GitHub repositories
+
+```bash
+# Public repository — no token needed
+zenveil scan github torvalds/linux
+
+# Full URL format
+zenveil scan github https://github.com/owner/repo
+
+# Private repository
+zenveil scan github owner/private-repo --token ghp_your_token
+
+# Specific branch or tag
+zenveil scan github owner/repo --ref develop
+
+# Specific commit
+zenveil scan github owner/repo --ref abc123def456
+```
+
+## Setting up a GitHub token
+
+1. Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new) (classic) or [github.com/settings/tokens](https://github.com/settings/tokens) (fine-grained)
+2. Select the required scopes:
+   - `repo` — full access (required for private repos and opening PRs)
+   - `public_repo` — public repos only (read-only scanning)
+3. Set it as an environment variable:
+
+```bash
+export GITHUB_TOKEN="ghp_your_token_here"
+```
+
+## Auto-PR: fix and ship
+
+The most powerful ZenVeil feature — generate a fix and open a GitHub PR automatically.
+
+```bash
+# Fix a secret finding and open a PR
+zenveil fix ZG-A1B2C3 --auto-pr --repo owner/repo
+
+# The PR is opened instantly — no AI needed for secret redaction
+```
+
+### What auto-PR does
+
+For secret findings (AWS keys, GitHub tokens, Slack tokens, JWT tokens):
+1. Clones the target repository
+2. Redacts the secret value in-place with a `<REDACTED_*>` placeholder
+3. Opens a PR with a description linking to the finding and remediation steps
+4. You review and merge — no manual patching
+
+For `.gitignore` findings:
+1. Opens a PR that adds the missing `.env*` exclusion pattern
+2. No secrets are modified — only `.gitignore` is updated
+
+For other findings:
+1. Generates an AI fix
+2. Opens a PR with the fix in the description for you to apply manually
+
+### Auto-PR for low-severity findings
+
+After scanning a GitHub repo, automatically open a PR if all findings are LOW:
+
+```bash
+zenveil scan github owner/repo --auto-pr-low
+```
+
+This is useful as a CI step: it creates a clean-up PR when the scan finds only low-severity issues, keeping your security debt from accumulating.
+
+## GitHub Actions integration
+
+### Basic security gate
+
+Block merges if CRITICAL or HIGH findings are detected:
+
+```yaml
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  security:
+    name: ZenVeil Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ZenVeil
+        run: pip install zenveil
+
+      - name: Run security scan
+        env:
+          ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+        run: zenveil scan repo . --json security-results.json
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan
+          path: security-results.json
+```
+
+### Scan with CVE checks
+
+```yaml
+- name: Run security scan with CVE checks
+  env:
+    ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: zenveil scan repo . --check-cves --json security-results.json
+```
+
+### Auto-fix PRs in CI
+
+```yaml
+- name: Auto-fix low-severity issues
+  env:
+    ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    zenveil scan github ${{ github.repository }} \
+      --token ${{ secrets.GITHUB_TOKEN }} \
+      --auto-pr-low
+```
+
+## Secrets required in GitHub
+
+| Secret name | Value |
+|---|---|
+| `ZENVEIL_API_KEY` | Your ZenVeil API key from the dashboard |
+| `GITHUB_TOKEN` | Auto-provided by Actions, or a PAT with `repo` scope |
+| `ANTHROPIC_API_KEY` | Required for `explain`, `fix`, `triage` commands |
+
+Set these at **Settings → Secrets and variables → Actions** in your repository.
+
+## Exit codes for CI gates
+
+```bash
+zenveil scan repo .
+# Exits 0: no CRITICAL or HIGH findings — build passes
+# Exits 1: CRITICAL or HIGH found — build fails
+# Exits 2: scan error — check logs
+```
+
+```yaml
+- name: Security gate
+  run: |
+    zenveil scan repo . || {
+      echo "Security issues found — see artifact for details"
+      exit 1
+    }
+```

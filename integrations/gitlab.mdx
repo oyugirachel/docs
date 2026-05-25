@@ -1,0 +1,95 @@
+---
+title: "GitLab Integration"
+description: "Scan GitLab repositories and add security gates to GitLab CI pipelines."
+---
+
+## Overview
+
+ZenVeil integrates with GitLab for CI/CD pipeline security gates and repository scanning.
+
+## GitLab CI pipeline
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - test
+  - security
+  - deploy
+
+security-scan:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install zenveil
+  script:
+    - zenveil scan repo . --json security-results.json
+  artifacts:
+    name: security-results
+    when: always
+    paths:
+      - security-results.json
+    reports:
+      # GitLab security dashboard integration (future)
+      # sast: security-results.json
+    expire_in: 90 days
+  variables:
+    ZENVEIL_API_KEY: $ZENVEIL_API_KEY
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+```
+
+## Setting CI/CD variables
+
+In your GitLab project, go to **Settings → CI/CD → Variables** and add:
+
+| Variable | Value | Protected | Masked |
+|---|---|---|---|
+| `ZENVEIL_API_KEY` | Your ZenVeil API key | Yes | Yes |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key | Yes | Yes |
+
+## Merge request gate
+
+Block merges if CRITICAL or HIGH findings are detected:
+
+```yaml
+security-gate:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install zenveil
+  script:
+    - zenveil scan repo . --json security-results.json
+    - |
+      CRITICAL=$(python3 -c "
+        import json
+        data = json.load(open('security-results.json'))
+        print(sum(1 for f in data.get('findings', []) if f['severity'] in ['CRITICAL', 'HIGH']))
+      ")
+      if [ "$CRITICAL" -gt "0" ]; then
+        echo "Security gate failed: $CRITICAL CRITICAL/HIGH findings"
+        exit 1
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+```
+
+## Scheduled weekly scan
+
+```yaml
+weekly-security-scan:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install zenveil
+  script:
+    - zenveil scan repo . --check-cves --json weekly-security.json
+  artifacts:
+    paths:
+      - weekly-security.json
+    expire_in: 1 year
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+```
+
+Configure the schedule in **CI/CD → Schedules** in your project.

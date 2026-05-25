@@ -1,0 +1,92 @@
+---
+title: "zenveil list & stats"
+description: "Browse, filter, and summarize findings from the last scan."
+---
+
+## zenveil list
+
+List findings from the last scan in a formatted table. Supports filtering by severity and scanner.
+
+### Usage
+
+```bash
+zenveil list [flags]
+```
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--severity <levels>` | Comma-separated severity filter: `critical`, `high`, `medium`, `low` |
+| `--scanner <name>` | Filter by scanner: `secrets`, `supply_chain`, `api_headers`, `cicd` |
+
+### Examples
+
+```bash
+# List all findings
+zenveil list
+
+# Only show critical and high
+zenveil list --severity critical,high
+
+# Only show secrets findings
+zenveil list --scanner secrets
+
+# Combine filters
+zenveil list --severity high --scanner supply_chain
+```
+
+### Sample output
+
+```
+  ╭──────────┬──────────┬───────────────┬────────────────────────────┬──────────────┬─────────────────────╮
+  │ ID       │ Severity │ Scanner       │ OWASP                      │ Title        │ Location            │
+  ├──────────┼──────────┼───────────────┼────────────────────────────┼──────────────┼─────────────────────┤
+  │ ZG-A1B2  │ CRITICAL │ secrets       │ A02:2021                   │ AWS access   │ src/config.js:14    │
+  │ ZG-C3D4  │ HIGH     │ secrets       │ A02:2021                   │ .env committ │ .env                │
+  │ ZG-E5F6  │ HIGH     │ secrets       │ A02:2021, A07:2021         │ Token in     │ src/auth/login.js:8 │
+  │ ZG-G7H8  │ HIGH     │ supply_chain  │                            │ Missing lock │ package.json        │
+  │ ZG-I9J0  │ MEDIUM   │ secrets       │                            │ Debug mode   │ config/app.js:3     │
+  ╰──────────┴──────────┴───────────────┴────────────────────────────┴──────────────┴─────────────────────╯
+
+  5 finding(s) shown.
+```
+
+Findings are sorted by severity (CRITICAL → HIGH → MEDIUM → LOW), then alphabetically by title.
+
+---
+
+## zenveil stats
+
+Show a summary of the last scan: target, timing, and counts by severity and scanner.
+
+### Usage
+
+```bash
+zenveil stats
+```
+
+### Sample output
+
+```
+Scan target  : /home/user/my-api (repo)
+Started      : 2026-05-25T09:41:22Z
+Completed    : 2026-05-25T09:41:24Z
+Total findings: 5
+
+By severity:
+  CRITICAL   1
+  HIGH       3
+  MEDIUM     1
+
+By scanner:
+  secrets              4
+  supply_chain         1
+```
+
+### Use in CI
+
+```bash
+# Print stats then fail if any critical/high exist
+zenveil scan repo . && zenveil stats
+```

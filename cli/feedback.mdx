@@ -1,0 +1,52 @@
+---
+title: "zenveil feedback"
+description: "Record human verdicts on findings to improve detection quality and build a team-shared annotation layer."
+---
+
+See [zenveil ignore & feedback](/cli/ignore) for full documentation on both commands.
+
+## Quick reference
+
+```bash
+# Mark a finding as correctly identified
+zenveil feedback ZG-A1B2 correct
+
+# Mark as a false positive
+zenveil feedback ZG-A1B2 false_positive
+
+# Mark as real but low priority
+zenveil feedback ZG-A1B2 low_priority
+```
+
+## Verdicts
+
+| Verdict | When to use |
+|---|---|
+| `correct` | The finding is a real vulnerability and should be remediated |
+| `false_positive` | ZenVeil flagged something that isn't actually a vulnerability in this context |
+| `low_priority` | The finding is real, but your team has accepted the risk for now |
+
+## Workflow integration
+
+Use feedback alongside `ignore` for complete finding lifecycle management:
+
+```bash
+# Step 1: Scan
+zenveil scan repo .
+
+# Step 2: Review findings
+zenveil list
+
+# Step 3: Explain anything uncertain
+zenveil explain ZG-X1Y2
+
+# Step 4: Record verdicts
+zenveil feedback ZG-A1B2 correct    # Will fix
+zenveil feedback ZG-C3D4 correct    # Will fix
+
+# Step 5: Suppress confirmed false positives
+zenveil ignore ZG-X1Y2 --reason "Test fixture, not production code"
+
+# Step 6: Fix what matters
+zenveil fix ZG-A1B2 --auto-pr --repo owner/repo
+```

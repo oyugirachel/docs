@@ -1,0 +1,240 @@
+---
+title: "Installation"
+description: "Install ZenVeil on any platform in under two minutes. Python 3.8+, pip, done."
+---
+
+## Requirements
+
+| Requirement | Minimum version | Notes |
+|---|---|---|
+| Python | 3.8+ | 3.11+ recommended |
+| pip | 21.0+ | Ships with Python |
+| OS | Linux, macOS, Windows | WSL2 supported on Windows |
+
+## Install via pip
+
+```bash
+pip install zenveil
+```
+
+Verify the installation:
+
+```bash
+zenveil --version
+# zenveil 1.0.0
+```
+
+## Install in a virtual environment (recommended)
+
+Keep your global Python environment clean by using a virtual environment:
+
+<CodeGroup>
+```bash macOS / Linux
+python -m venv .venv
+source .venv/bin/activate
+pip install zenveil
+```
+
+```bash Windows (PowerShell)
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install zenveil
+```
+
+```bash Windows (CMD)
+python -m venv .venv
+.venv\Scripts\activate.bat
+pip install zenveil
+```
+</CodeGroup>
+
+## Install from source
+
+For the latest unreleased changes:
+
+```bash
+git clone https://github.com/zenveil/zenveil.git
+cd zenveil
+pip install -e .
+```
+
+## Configuration
+
+### API key setup
+
+Get your API key from the [ZenVeil dashboard](https://app.zenveil.dev/settings/api-keys) and set it as an environment variable:
+
+```bash
+export ZENVEIL_API_KEY="zvk_live_your_key_here"
+```
+
+To make it permanent, add it to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+echo 'export ZENVEIL_API_KEY="zvk_live_your_key_here"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Or use `zenveil login` to authenticate interactively — this stores your key in `~/.zenveil/credentials`.
+
+### Optional: AI analysis keys
+
+AI-powered commands (`explain`, `fix`, `triage`, `agent`) use Claude. Set your Anthropic API key:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-your_key_here"
+```
+
+Get your key at [console.anthropic.com](https://console.anthropic.com).
+
+### Optional: GitHub token
+
+GitHub scanning and auto-PR require a GitHub token with `repo` scope:
+
+```bash
+export GITHUB_TOKEN="ghp_your_token_here"
+```
+
+Create a token at [github.com/settings/tokens](https://github.com/settings/tokens). Required scopes:
+- `repo` — for private repository scanning and opening pull requests
+- `public_repo` — for public repository scanning only
+
+### Full environment setup
+
+```bash
+# ~/.zshrc or ~/.bashrc
+
+# Required for all ZenVeil operations
+export ZENVEIL_API_KEY="zvk_live_your_key_here"
+
+# Required for AI-powered commands (explain, fix, triage, agent)
+export ANTHROPIC_API_KEY="sk-ant-your_key_here"
+
+# Required for GitHub scanning and auto-PR
+export GITHUB_TOKEN="ghp_your_token_here"
+```
+
+## Platform-specific notes
+
+<AccordionGroup>
+  <Accordion title="macOS" icon="apple">
+    ZenVeil works with the system Python 3 or any Homebrew/pyenv Python.
+
+    ```bash
+    # Homebrew Python (recommended)
+    brew install python@3.11
+    pip3 install zenveil
+
+    # pyenv
+    pyenv install 3.11.0
+    pyenv global 3.11.0
+    pip install zenveil
+    ```
+
+    If you see a `command not found: zenveil` error, ensure `~/.local/bin` is on your `$PATH`:
+
+    ```bash
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+  </Accordion>
+  <Accordion title="Linux (Ubuntu/Debian)" icon="linux">
+    ```bash
+    sudo apt update
+    sudo apt install python3 python3-pip python3-venv -y
+    pip3 install --user zenveil
+    ```
+
+    If installing globally in CI:
+
+    ```bash
+    sudo pip3 install zenveil
+    ```
+  </Accordion>
+  <Accordion title="Windows (WSL2)" icon="windows">
+    ZenVeil runs natively in WSL2 (Windows Subsystem for Linux). Follow the Linux instructions inside your WSL2 shell.
+
+    Native Windows support via PowerShell is experimental. WSL2 is the recommended path.
+  </Accordion>
+  <Accordion title="Docker" icon="docker">
+    Run ZenVeil in a container without any local Python installation:
+
+    ```dockerfile
+    FROM python:3.11-slim
+    RUN pip install zenveil
+    WORKDIR /scan
+    ENTRYPOINT ["zenveil"]
+    ```
+
+    ```bash
+    docker build -t zenveil .
+    docker run --rm -v $(pwd):/scan \
+      -e ZENVEIL_API_KEY=$ZENVEIL_API_KEY \
+      zenveil scan repo /scan
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Upgrading
+
+```bash
+pip install --upgrade zenveil
+```
+
+Check the current version:
+
+```bash
+zenveil --version
+```
+
+## Uninstalling
+
+```bash
+pip uninstall zenveil
+```
+
+ZenVeil stores scan caches in `.zenveil-last-scan.json` (in your project directory) and credentials in `~/.zenveil/`. Remove them manually if needed:
+
+```bash
+rm -f .zenveil-last-scan.json .zenveil-ignore.json
+rm -rf ~/.zenveil
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="`zenveil: command not found`" icon="triangle-exclamation">
+    The pip scripts directory is not on your `$PATH`.
+
+    ```bash
+    # Find where pip installs scripts
+    python -m site --user-base
+    # Add /path/to/site-packages/../bin to $PATH
+    export PATH="$(python -m site --user-base)/bin:$PATH"
+    ```
+  </Accordion>
+  <Accordion title="`ModuleNotFoundError: No module named 'anthropic'`" icon="triangle-exclamation">
+    The `anthropic` package is not installed in the active environment.
+
+    ```bash
+    pip install anthropic
+    # or reinstall zenveil which pulls it as a dependency
+    pip install --force-reinstall zenveil
+    ```
+  </Accordion>
+  <Accordion title="SSL certificate errors on corporate networks" icon="triangle-exclamation">
+    If your company uses a custom CA bundle:
+
+    ```bash
+    pip install --cert /path/to/company-ca.crt zenveil
+    ```
+  </Accordion>
+  <Accordion title="Permission denied on pip install" icon="triangle-exclamation">
+    Never use `sudo pip`. Instead, install to user scope:
+
+    ```bash
+    pip install --user zenveil
+    ```
+
+    Or use a virtual environment (recommended).
+  </Accordion>
+</AccordionGroup>

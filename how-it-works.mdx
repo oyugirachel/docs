@@ -1,0 +1,159 @@
+---
+title: "How It Works"
+description: "ZenVeil's architecture — from CLI command to AI-generated pull request."
+---
+
+## System architecture
+
+ZenVeil has three components that work together to deliver end-to-end security scanning:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Developer                            │
+│                    zenveil scan repo .                      │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Python CLI (zenveil)                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Scanners   │  │  AI Agent    │  │   Integrations   │  │
+│  │  secrets     │  │  explain     │  │   GitHub PR      │  │
+│  │  supply_chain│  │  fix         │  │   GitLab         │  │
+│  │  api_headers │  │  triage      │  │   Slack          │  │
+│  │  cicd        │  │  agent REPL  │  │   Email          │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+              ┌──────────┼──────────┐
+              │          │          │
+              ▼          ▼          ▼
+     ┌──────────────┐  ┌────────┐  ┌─────────────────┐
+     │  FastAPI     │  │Anthropic│  │  GitHub API     │
+     │  Scanning    │  │ Claude  │  │  (scan/PR)      │
+     │  API         │  │ Gemini  │  │                 │
+     └──────────────┘  └────────┘  └─────────────────┘
+              │
+              ▼
+     ┌──────────────────────────────────────┐
+     │         Node.js / Express            │
+     │         Web Server (Dashboard)       │
+     │  ┌──────────┐  ┌──────────────────┐  │
+     │  │  Clerk   │  │  Stripe Billing  │  │
+     │  │  Auth    │  │  Subscriptions   │  │
+     │  └──────────┘  └──────────────────┘  │
+     │           MongoDB Atlas              │
+     └──────────────────────────────────────┘
+```
+
+## Component overview
+
+### Python CLI (`zenveil`)
+
+The CLI is the primary interface for developers. It orchestrates all scanning, AI analysis, and integrations.
+
+**Scanning orchestrator** — coordinates multiple scanners against a target and aggregates results into a unified `ScanResult` with consistent finding IDs, severities, OWASP categories, and evidence.
+
+**Scanners** — each scanner is independent and targets specific vulnerability classes:
+
+| Scanner | Target | What it finds |
+|---|---|---|
+| `secrets` | Local repos | Hardcoded credentials, .env hygiene, OWASP patterns |
+| `supply_chain` | Local repos | Lockfiles, floating versions, dependency confusion, CVEs |
+| `api_headers` | API URLs | Missing security headers, CORS, HTTPS enforcement |
+| `cicd` | Workflow files | Injection, unpinned actions, overprivileged tokens |
+
+**AI agent** — Claude-backed modules for `explain`, `fix`, `triage`, and the interactive REPL. All AI calls stream token-by-token to the terminal.
+
+### FastAPI scanning API
+
+The scanning API runs as a standalone Python service. It wraps the same scanning engine used by the CLI and exposes it over HTTP for use by the web dashboard and third-party integrations.
+
+- Auth: `X-API-Key` header
+- Base URL: `https://api.zenveil.dev`
+- Endpoints: `/v1/scan/github`, `/v1/scan/api`, `/v1/explain`, `/v1/fix`, `/v1/triage`, `/v1/fix/pr`
+- AI responses stream as `text/plain`
+
+### Node.js web server
+
+The web server handles everything that isn't scanning:
+
+- **Dashboard** — Clerk JWT authentication, user management, scan history
+- **Billing** — Stripe subscriptions (free / pro / team), checkout flow, webhook handling
+- **API key management** — issue and revoke CLI API keys tied to Stripe plan limits
+
+## Scan lifecycle
+
+<Steps>
+  <Step title="Target resolution">
+    ZenVeil resolves the scan target:
+    - `repo` — validates the path exists and is readable
+    - `github` — parses `owner/repo` or full GitHub URL, downloads the archive via the GitHub API
+    - `api` — validates the URL and checks for SSRF targets (private IP ranges are blocked)
+  </Step>
+
+  <Step title="Scanner dispatch">
+    The orchestrator runs applicable scanners in sequence. Each scanner returns a list of `Finding` objects with:
+    - Unique ID (e.g., `ZG-A1B2C3`)
+    - Severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`)
+    - OWASP categories
+    - Location (file, line, column)
+    - Evidence (what matched, with secrets redacted)
+    - Confidence score (0.0–1.0)
+    - Remediation guidance
+  </Step>
+
+  <Step title="Result aggregation">
+    All findings are merged into a `ScanResult` and:
+    - Rendered to the terminal as a rich table
+    - Cached locally as `.zenveil-last-scan.json` for subsequent `explain`, `fix`, `list`, and `triage` commands
+    - Optionally written to a JSON or HTML report file
+  </Step>
+
+  <Step title="Exit code">
+    ZenVeil exits with code `1` if any `CRITICAL` or `HIGH` finding exists — perfect for CI/CD gates. All other severities exit `0`.
+  </Step>
+</Steps>
+
+## Finding ID system
+
+Every finding gets a stable, deterministic ID of the form `ZG-XXXXXX` (6 hex characters). The ID is based on the finding content — same code, same vulnerability, same ID. This makes ignoring, tracking, and referencing findings reliable across scans.
+
+```bash
+# Reference a specific finding across commands
+zenveil explain ZG-A1B2C3
+zenveil fix ZG-A1B2C3
+zenveil ignore ZG-A1B2C3 --reason "Handled by secret manager migration"
+zenveil feedback ZG-A1B2C3 false_positive
+```
+
+## AI model routing
+
+ZenVeil uses Claude (Anthropic) as the primary AI model for all analysis. Google Gemini is used as a fallback when Anthropic is unavailable. The model routing is transparent — you set your API keys and ZenVeil handles the rest.
+
+```
+ANTHROPIC_API_KEY set → Claude (primary)
+GEMINI_API_KEY set    → Gemini (fallback)
+Neither set           → AI commands disabled (HTTP 503)
+```
+
+## Local-first design
+
+For `scan repo` commands, **no code leaves your machine**. The scanning engine runs entirely locally:
+
+- File traversal and pattern matching: local Python process
+- CVE lookups (`--check-cves`): read-only requests to [osv.dev](https://osv.dev) (public, no auth)
+- AI analysis (`explain`, `fix`): your code snippet is sent to Anthropic/Gemini — see [Security Philosophy](/security/philosophy)
+- GitHub scanning: the repository archive is downloaded to a temporary directory and deleted after scanning
+
+## Data flow for GitHub scanning
+
+```
+zenveil scan github owner/repo
+    │
+    ├── Download archive from api.github.com (authenticated if --token provided)
+    ├── Extract to /tmp/zenveil-XXXXXX/
+    ├── Run all scanners against extracted files
+    ├── Delete /tmp/zenveil-XXXXXX/
+    └── Return findings (no code stored, no code sent to ZenVeil servers)
+```

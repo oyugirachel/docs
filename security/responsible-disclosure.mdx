@@ -1,0 +1,86 @@
+---
+title: "Responsible Disclosure"
+description: "How to report security vulnerabilities in ZenVeil. We respond within 24 hours."
+---
+
+## Security contact
+
+**Email:** `security@zenveil.dev`
+
+We respond to all security reports within **24 hours** and aim to have critical issues patched within **7 days**.
+
+## What qualifies for disclosure
+
+We welcome reports on:
+
+- Authentication or authorization bypasses
+- API key exposure or leakage
+- Injection vulnerabilities (SQLi, command injection, SSRF)
+- Remote code execution
+- Privilege escalation
+- Data exposure (other users' scan results, credentials, PII)
+- Cryptographic weaknesses
+- Race conditions with security implications
+
+## What doesn't qualify
+
+- Bugs that require physical access to a device
+- Denial of service attacks
+- Social engineering or phishing
+- Issues in third-party services (report to Anthropic, GitHub, Stripe directly)
+- Scanner false positives (use `zenveil feedback` for these)
+- Issues only exploitable by an authenticated user with admin access
+
+## How to report
+
+1. **Email** `security@zenveil.dev` with:
+   - Description of the vulnerability
+   - Steps to reproduce
+   - Potential impact assessment
+   - Your GitHub username or preferred handle (for credit)
+
+2. We'll acknowledge receipt within **24 hours**
+
+3. We'll investigate and keep you updated every **48 hours**
+
+4. Once patched, we'll coordinate a disclosure timeline with you
+
+5. We'll credit you in our security changelog (with your permission)
+
+## PGP key
+
+For sensitive reports, encrypt your email using our PGP key. Request it by emailing `security@zenveil.dev`.
+
+## What we commit to
+
+- Respond within 24 hours
+- Not pursue legal action against good-faith researchers
+- Patch critical issues within 7 days
+- Patch high/medium issues within 30 days
+- Publicly credit researchers (with consent)
+- Not share your report with third parties without consent
+
+## Safe harbor
+
+We consider security research conducted under these guidelines to be:
+
+- Authorized under our terms of service
+- Exempt from restrictions in our terms that would otherwise prohibit the testing activity
+- Lawful and not something we intend to pursue legal action over
+
+## Bug bounty
+
+We currently operate a goodwill program. While we don't have a formal bounty structure yet, we offer:
+- Public acknowledgment in our security changelog
+- Extended trial of ZenVeil Pro
+- A direct conversation with the engineering team
+
+A formal bug bounty program is planned for 2026.
+
+## Past disclosures
+
+| Date | Severity | Description | Reporter |
+|---|---|---|---|
+| — | — | No disclosures yet | — |
+
+We maintain a transparent disclosure log. As we grow, this page will track publicly-known vulnerabilities and their remediation timeline.

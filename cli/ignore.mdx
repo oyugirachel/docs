@@ -1,0 +1,109 @@
+---
+title: "zenveil ignore & feedback"
+description: "Suppress false positives and record human verdicts to refine ZenVeil's output."
+---
+
+## zenveil ignore
+
+Suppress a finding so it no longer appears in future reports. Suppressed findings are stored in `.zenveil-ignore.json` in your project root.
+
+### Usage
+
+```bash
+zenveil ignore <finding_id> [--reason "text"]
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `finding_id` | The finding ID to suppress (e.g., `ZG-A1B2C3`) |
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--reason <text>` | Optional reason for suppression. Recommended for audit trails. |
+
+### Examples
+
+```bash
+# Suppress a finding
+zenveil ignore ZG-I9J0
+
+# Suppress with a reason (recommended)
+zenveil ignore ZG-I9J0 --reason "Debug mode is intentional in dev environment"
+zenveil ignore ZG-G7H8 --reason "This project uses yarn, lockfile is yarn.lock"
+zenveil ignore ZG-M1N2 --reason "Known false positive — test fixture file"
+```
+
+### Sample output
+
+```
+Suppressed ZG-I9J0 (Debug mode enabled). Stored in .zenveil-ignore.json.
+```
+
+### The ignore file
+
+Ignored findings are stored in `.zenveil-ignore.json`:
+
+```json
+{
+  "ZG-I9J0": {
+    "title": "Debug mode enabled",
+    "scanner": "secrets",
+    "severity": "MEDIUM",
+    "reason": "Debug mode is intentional in dev environment"
+  }
+}
+```
+
+<Tip>
+Commit `.zenveil-ignore.json` to your repository so the whole team benefits from shared suppressions. Review it periodically — ignored findings can become relevant again as your codebase evolves.
+</Tip>
+
+---
+
+## zenveil feedback
+
+Record a human verdict on a finding. This feeds ZenVeil's lightweight feedback loop and helps improve detection quality over time.
+
+### Usage
+
+```bash
+zenveil feedback <finding_id> <verdict>
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `finding_id` | The finding ID |
+| `verdict` | `correct`, `false_positive`, or `low_priority` |
+
+### Verdicts
+
+| Verdict | Meaning |
+|---|---|
+| `correct` | The finding is accurate and should be fixed |
+| `false_positive` | ZenVeil incorrectly flagged this — not a real vulnerability |
+| `low_priority` | The finding is real but acceptable for now (tech debt) |
+
+### Examples
+
+```bash
+zenveil feedback ZG-A1B2 correct
+zenveil feedback ZG-I9J0 false_positive
+zenveil feedback ZG-G7H8 low_priority
+```
+
+### Sample output
+
+```
+Recorded 'correct' for ZG-A1B2 (AWS access key).
+Feedback store totals: {'correct': 1, 'false_positive': 0, 'low_priority': 0}
+```
+
+### Feedback storage
+
+Feedback is stored in `.zenveil-feedback.json` in your project root. You can commit this file to share verdicts across your team.

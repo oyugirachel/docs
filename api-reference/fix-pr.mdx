@@ -1,0 +1,107 @@
+---
+title: "POST /v1/fix/pr"
+description: "Open a GitHub pull request with a deterministic fix for a secret leak or missing .gitignore entry."
+---
+
+## Endpoint
+
+```
+POST /v1/fix/pr
+```
+
+## Overview
+
+This endpoint opens a GitHub PR with a deterministic (non-AI) fix. It works for:
+- Secret redaction: AWS keys, GitHub tokens, Slack tokens, JWT tokens
+- `.gitignore` additions for missing `.env` exclusion patterns
+
+No Anthropic API key is required — fixes are applied via pattern matching and file manipulation.
+
+## Request
+
+```json
+{
+  "finding": {
+    "id": "ZG-A1B2C3",
+    "category": "secrets",
+    "severity": "CRITICAL",
+    "title": "AWS access key",
+    "description": "...",
+    "evidence": "...",
+    "location": {
+      "target": "owner/repo",
+      "path": "src/config.js",
+      "line": 14,
+      "column": 23
+    },
+    "scanner_name": "secrets",
+    "remediation": "...",
+    "confidence": 0.95,
+    "owasp_categories": ["A02:2021"]
+  },
+  "repository": "owner/repo",
+  "token": "ghp_your_github_token"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `finding` | FindingSchema | Yes | The finding to fix |
+| `repository` | string | Yes | `owner/repo` to open the PR against |
+| `token` | string | No | GitHub token. Falls back to server `GITHUB_TOKEN` env var. |
+
+## Response
+
+```json
+{
+  "pr_url": "https://github.com/owner/repo/pull/42",
+  "message": "Pull request opened successfully."
+}
+```
+
+## Supported finding types
+
+| Finding title | PR behavior |
+|---|---|
+| `AWS access key` | Redacts the key value in-place |
+| `GitHub token` | Redacts the token value in-place |
+| `Slack token` | Redacts the token value in-place |
+| `JWT token` | Redacts the token value in-place |
+| `.env not in .gitignore` | Adds `.env*` pattern to `.gitignore` |
+
+For other finding types, use `/v1/fix` for an AI-generated fix instead.
+
+## Example
+
+```bash
+curl -X POST https://api.zenveil.dev/v1/fix/pr \
+  -H "X-API-Key: zvk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "finding": {
+      "id": "ZG-A1B2C3",
+      "title": "AWS access key",
+      "severity": "CRITICAL",
+      "category": "secrets",
+      "description": "Potential secret found.",
+      "evidence": "AWS access key pattern matched; secret value redacted.",
+      "location": {"target": "owner/repo", "path": "src/config.js", "line": 14},
+      "scanner_name": "secrets",
+      "remediation": "Revoke the key and use a secret manager.",
+      "confidence": 0.95,
+      "owasp_categories": ["A02:2021"]
+    },
+    "repository": "owner/repo",
+    "token": "ghp_your_token"
+  }'
+```
+
+## Error responses
+
+| Status | Error | Cause |
+|---|---|---|
+| `400` | Finding not supported | Use `/v1/fix` for AI-generated fixes |
+| `400` | GitHub token required | Pass `token` in body or set `GITHUB_TOKEN` on server |
+| `403` | Permission denied | Token lacks `repo` write access |
+| `404` | Repository not found | Check repository name and token permissions |
+| `500` | Could not open PR | Unexpected error — retry |

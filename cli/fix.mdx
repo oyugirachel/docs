@@ -1,0 +1,138 @@
+---
+title: "zenveil fix"
+description: "Generate AI-powered fixes for security findings and open GitHub pull requests automatically."
+---
+
+## Overview
+
+`zenveil fix` uses Claude to generate a production-ready fix for a specific finding from the last scan. With `--auto-pr`, it creates a GitHub pull request with the fix applied.
+
+## Usage
+
+```bash
+zenveil fix <finding_id> [flags]
+```
+
+## Arguments
+
+| Argument | Description |
+|---|---|
+| `finding_id` | The finding ID from `zenveil list` or scan output (e.g., `ZG-A1B2C3`) |
+
+## Flags
+
+| Flag | Description |
+|---|---|
+| `--api-key <key>` | Anthropic API key. Defaults to `ANTHROPIC_API_KEY` env var. |
+| `--auto-pr` | Open a GitHub pull request with the fix. Requires `--repo`. |
+| `--repo <r>` | GitHub repository (`owner/repo` or full URL). Required with `--auto-pr`. |
+| `--token <tok>` | GitHub token. Defaults to `GITHUB_TOKEN` env var. |
+
+## Examples
+
+```bash
+# Generate a fix and print it to the terminal
+zenveil fix ZG-A1B2C3
+
+# Generate fix and open a GitHub PR
+zenveil fix ZG-A1B2C3 --auto-pr --repo owner/my-app
+
+# Use a specific GitHub token
+zenveil fix ZG-A1B2C3 --auto-pr --repo owner/my-app --token ghp_your_token
+
+# Use a specific Anthropic API key
+zenveil fix ZG-A1B2C3 --api-key sk-ant-your_key
+```
+
+## How it works
+
+<Steps>
+  <Step title="Load finding from cache">
+    ZenVeil loads the finding from `.zenveil-last-scan.json`. Always run a fresh `scan` before `fix` if the codebase has changed.
+  </Step>
+  <Step title="Generate fix (AI)">
+    The finding — including its title, description, evidence, OWASP category, location, and remediation guidance — is sent to Claude. The response streams token-by-token to your terminal.
+
+    For secret findings (AWS keys, GitHub tokens, JWT tokens, Slack tokens), ZenVeil uses deterministic redaction instead of AI — faster and more accurate for these specific cases.
+  </Step>
+  <Step title="Open pull request (if --auto-pr)">
+    If `--auto-pr` is provided, ZenVeil opens a GitHub PR:
+    - **Secret findings** — redacts the secret directly in the file
+    - **`.gitignore` findings** — adds the missing exclusion pattern
+    - **Other findings** — adds the AI-generated fix as the PR description for a developer to apply
+
+    The PR includes the finding ID, severity, OWASP category, and a link to the full explanation.
+  </Step>
+</Steps>
+
+## Sample output
+
+```
+Generating fix for ZG-A1B2C3: AWS access key
+
+The AWS access key (AKIA...) found at src/config.js:14 must be removed
+from source immediately and the key revoked. Here is the fix:
+
+**Step 1: Revoke the key**
+Go to AWS IAM Console → Users → [your user] → Security credentials → 
+Access keys → Deactivate and then Delete the key AKIA[...].
+
+**Step 2: Remove from source**
+Replace the hardcoded key in src/config.js:14:
+
+```diff
+- const AWS_ACCESS_KEY = 'AKIAIOSFODNN7EXAMPLE';
++ const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID;
+```
+
+**Step 3: Add to .gitignore**
+```
+.env
+.env.*
+!.env.example
+```
+
+**Step 4: Rotate in AWS Secrets Manager**
+Store the new key in AWS Secrets Manager and retrieve it at runtime:
+
+```javascript
+const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
+const client = new SecretsManagerClient({ region: 'us-east-1' });
+const secret = await client.send(new GetSecretValueCommand({ SecretId: 'my-app/aws-key' }));
+```
+
+---
+Opening pull request…
+Opened pull request: https://github.com/owner/my-app/pull/18
+```
+
+## Auto-PR decision matrix
+
+| Finding type | AI needed? | PR behavior |
+|---|---|---|
+| `AWS access key` | No | Redacts secret in-place |
+| `GitHub token` | No | Redacts token in-place |
+| `Slack token` | No | Redacts token in-place |
+| `JWT token` | No | Redacts token in-place |
+| `.env not in .gitignore` | No | Adds `.env*` to `.gitignore` |
+| All other findings | Yes | AI fix added as PR description |
+
+<Note>
+For secret redaction PRs, no `ANTHROPIC_API_KEY` is required — ZenVeil uses deterministic pattern matching. This means you can use `--auto-pr` for secret cleanup in CI without an AI key.
+</Note>
+
+## Prerequisites
+
+- Run `zenveil scan` first — `fix` operates on the cached scan result
+- `ANTHROPIC_API_KEY` for AI-generated fixes (not required for secret redaction)
+- `GITHUB_TOKEN` with `repo` scope for `--auto-pr`
+
+## GitHub token requirements
+
+For `--auto-pr` to work, your GitHub token needs:
+- `repo` scope — to push commits and open pull requests
+- Write access to the target repository
+
+<Warning>
+Never commit your GitHub token. Set it as `GITHUB_TOKEN` in your environment or CI secrets.
+</Warning>

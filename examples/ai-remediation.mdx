@@ -1,0 +1,211 @@
+---
+title: "Example: AI Remediation Workflow"
+description: "From finding to merged PR — a complete AI-assisted remediation walkthrough."
+---
+
+## Scenario
+
+Your CI pipeline flagged a HIGH severity finding in a pull request. The developer who wrote the code is unfamiliar with the vulnerability class. You need to understand it, fix it, and ship it — fast.
+
+## Step 1: Find out what's flagged
+
+```bash
+zenveil list --severity high,critical
+```
+
+```
+  ┌──────────┬──────────┬──────────┬───────────────────────────────────────┬─────────────────────────────┐
+  │ ID       │ Severity │ Scanner  │ Title                                 │ Location                    │
+  ├──────────┼──────────┼──────────┼───────────────────────────────────────┼─────────────────────────────┤
+  │ ZG-M1N2  │ HIGH     │ secrets  │ Potential missing authorization       │ src/routes/users.js:23      │
+  │          │          │          │ middleware                             │                             │
+  └──────────┴──────────┴──────────┴───────────────────────────────────────┴─────────────────────────────┘
+
+  1 finding(s) shown.
+```
+
+## Step 2: Get the AI explanation
+
+```bash
+zenveil explain ZG-M1N2
+```
+
+```
+Explaining ZG-M1N2: Potential missing authorization middleware
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+What this is:
+At src/routes/users.js:23, a route is registered that handles
+/api/users/billing — a sensitive path — with a handler that binds
+directly without a visible authorization middleware argument.
+
+The pattern:
+  router.get('/api/users/billing', async (req, res) => { ... })
+
+Compare to what a secured route looks like:
+  router.get('/api/users/billing', requireAuth, async (req, res) => { ... })
+
+Why it matters:
+Without authentication middleware, this route accepts requests from
+anyone — no login required. An attacker can call this endpoint directly
+with curl and receive billing information for any user.
+
+This is OWASP A01:2021 — Broken Access Control, the #1 web vulnerability
+category for the fourth year running.
+
+How to verify:
+  curl http://localhost:3000/api/users/billing
+  # If you get data without a token, the route is unprotected.
+
+OWASP: A01:2021 — Broken Access Control
+Confidence: 62% (route middleware may exist in imported router setup)
+Note: Confidence is moderate — review the actual route file to confirm.
+```
+
+## Step 3: Verify the finding
+
+The confidence is 62% — this might be a false positive. Check the file:
+
+```javascript
+// src/routes/users.js:20-30 — the flagged code
+router.get('/api/users/billing', async (req, res) => {
+  const userId = req.params.id;
+  const billing = await BillingModel.findOne({ userId });
+  return res.json(billing);
+});
+```
+
+It's real — no `requireAuth` middleware. Confirm:
+
+```bash
+curl http://localhost:3000/api/users/billing
+# Returns billing data with no authentication required
+```
+
+## Step 4: Generate an AI fix
+
+```bash
+zenveil fix ZG-M1N2
+```
+
+```
+Generating fix for ZG-M1N2: Potential missing authorization middleware
+
+The route at src/routes/users.js:23 is missing authentication
+middleware. Here's how to secure it:
+
+**Option 1: Add middleware to the specific route (quickest)**
+
+```javascript
+// Before
+router.get('/api/users/billing', async (req, res) => {
+
+// After
+router.get('/api/users/billing', requireAuth, async (req, res) => {
+```
+
+**Option 2: Protect the entire router (more secure)**
+
+If all routes in this file require authentication, protect the router:
+
+```javascript
+// In app.js or where the router is mounted
+app.use('/api/users', requireAuth, usersRouter);
+```
+
+**Option 3: Add authorization check inside the handler**
+
+If some routes in the file are public, add the check inside:
+
+```javascript
+router.get('/api/users/billing', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  let userId;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    userId = decoded.userId;
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  // Also verify the user can only see their own billing
+  const billing = await BillingModel.findOne({ userId });
+  if (!billing) return res.status(404).json({ error: 'Not found' });
+  return res.json(billing);
+});
+```
+
+**Recommended**: Option 2 if all routes need auth, Option 1 otherwise.
+
+**Also consider**: Does the handler verify that `userId` matches the
+authenticated user? IDOR (Insecure Direct Object Reference) is
+common here — fetching billing for any userId when the caller can
+only see their own is also a vulnerability.
+```
+
+## Step 5: Open a PR with the fix
+
+```bash
+# The fix is too complex for auto-PR, so open one manually with the context
+# First, record the fix decision
+zenveil feedback ZG-M1N2 correct
+
+# Then apply the fix, commit, and open a PR
+# (with the AI explanation in the PR description)
+```
+
+The PR description:
+
+```markdown
+## Security: Fix missing auth middleware on billing route
+
+Fixes ZG-M1N2 — Potential missing authorization middleware
+
+**Finding:** `src/routes/users.js:23` — the `/api/users/billing` route
+was accessible without authentication.
+
+**Severity:** HIGH | OWASP: A01:2021 — Broken Access Control
+
+**Fix applied:** Added `requireAuth` middleware to the route handler.
+Also added owner verification to prevent IDOR (accessing another user's billing).
+
+**Verified:** `curl http://localhost:3000/api/users/billing` now returns 401.
+
+---
+Detected by [ZenVeil](https://zenveil.dev) · Finding ID: ZG-M1N2
+```
+
+## Step 6: Rescan to confirm
+
+After merging:
+
+```bash
+zenveil scan repo .
+```
+
+```
+╭─────────────────────────────────────────────────────────────╮
+│  ZenVeil Security Scan                                      │
+│  Target: /home/user/my-app  ·  Duration: 1.1s               │
+╰─────────────────────────────────────────────────────────────╯
+
+  No findings detected.
+
+✓ Exiting with code 0
+```
+
+## Time invested
+
+| Step | Time |
+|---|---|
+| `zenveil list` | 5 seconds |
+| `zenveil explain` | 30 seconds |
+| Manual verification | 2 minutes |
+| `zenveil fix` | 45 seconds |
+| Apply fix + test + PR | 10 minutes |
+| **Total** | **~13 minutes** |
+
+Without ZenVeil, this vulnerability might have shipped to production — where it would expose billing data for every user to anyone who knows the URL.

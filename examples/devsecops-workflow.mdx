@@ -1,0 +1,262 @@
+---
+title: "Example: Full DevSecOps Workflow"
+description: "How to integrate ZenVeil into every stage of your development lifecycle — from local dev to production."
+---
+
+## Overview
+
+This guide shows a complete DevSecOps workflow using ZenVeil: from a developer's first commit to production deployment, with security validation at every stage.
+
+```
+Developer writes code
+      │
+      ▼
+zenveil scan repo .        ← Local: immediate feedback
+      │
+      ▼
+git push → CI pipeline
+      │
+      ├── zenveil scan repo .    ← PR gate: blocks merge on CRITICAL/HIGH
+      └── zenveil scan github    ← Scheduled: weekly CVE checks
+                │
+                ▼
+          Merge to main
+                │
+                ▼
+          zenveil scan api       ← Post-deploy: header check
+```
+
+## Stage 1: Local development
+
+Make ZenVeil part of your development loop. Run it before every commit:
+
+```bash
+# Add to your commit workflow
+git add .
+zenveil scan repo . && git commit -m "feat: add payment flow"
+# ↑ Only commit if scan passes (no CRITICAL/HIGH)
+```
+
+Or add it as a git pre-commit hook:
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+echo "Running ZenVeil security scan..."
+zenveil scan repo .
+if [ $? -eq 1 ]; then
+  echo ""
+  echo "✗ ZenVeil found CRITICAL or HIGH security issues."
+  echo "  Run 'zenveil list --severity critical,high' to see them."
+  echo "  Run 'zenveil explain <id>' for AI analysis."
+  echo "  Fix the issues or use 'git commit --no-verify' to bypass."
+  exit 1
+fi
+echo "✓ ZenVeil scan passed."
+```
+
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+<Tip>
+Use `git commit --no-verify` to bypass the hook when you're committing a work-in-progress that you know has issues — the CI pipeline will still catch it.
+</Tip>
+
+## Stage 2: Pull request gate (GitHub Actions)
+
+Every PR is scanned before it can be merged:
+
+```yaml
+# .github/workflows/security.yml
+name: Security Gate
+
+on:
+  pull_request:
+    branches: [main, develop, staging]
+
+jobs:
+  security-scan:
+    name: ZenVeil Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install ZenVeil
+        run: pip install zenveil
+
+      - name: Scan repository
+        id: scan
+        env:
+          ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+        run: |
+          zenveil scan repo . --json security-results.json
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('security-results.json'));
+            const critical = results.findings.filter(f => f.severity === 'CRITICAL').length;
+            const high = results.findings.filter(f => f.severity === 'HIGH').length;
+            const total = results.finding_count;
+
+            const statusIcon = (critical + high) > 0 ? '🚨' : '✅';
+            const body = [
+              `## ${statusIcon} ZenVeil Security Scan`,
+              ``,
+              `| Severity | Count |`,
+              `|---|---|`,
+              `| 🔴 CRITICAL | ${critical} |`,
+              `| 🟠 HIGH | ${high} |`,
+              `| 🟡 MEDIUM | ${results.findings.filter(f => f.severity === 'MEDIUM').length} |`,
+              `| 🟢 LOW | ${results.findings.filter(f => f.severity === 'LOW').length} |`,
+              ``,
+              critical + high > 0
+                ? `**❌ This PR cannot be merged until CRITICAL and HIGH findings are resolved.**`
+                : `**✅ Security gate passed. No blocking findings.**`,
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-${{ github.sha }}
+          path: security-results.json
+
+      - name: Fail if blocking findings
+        if: steps.scan.outputs.exit_code == '1'
+        run: exit 1
+```
+
+## Stage 3: Weekly scheduled scan
+
+Catch newly disclosed CVEs in your dependencies:
+
+```yaml
+# .github/workflows/weekly-security.yml
+name: Weekly Security Scan
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9am UTC
+  workflow_dispatch:       # Manual trigger
+
+jobs:
+  weekly-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install zenveil
+
+      - name: Scan with CVE checks
+        env:
+          ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+        run: zenveil scan repo . --check-cves --json weekly-scan.json
+
+      - name: Notify Slack on critical findings
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {"text": "🚨 Weekly security scan found critical issues in ${{ github.repository }}. Check the Actions tab."}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Store results
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-security-${{ github.run_id }}
+          path: weekly-scan.json
+          retention-days: 365
+```
+
+## Stage 4: Post-deploy API scan
+
+After each deployment, verify security headers are set correctly:
+
+```yaml
+# .github/workflows/post-deploy.yml
+name: Post-Deploy Security Check
+
+on:
+  deployment_status:
+
+jobs:
+  api-scan:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install zenveil
+
+      - name: Scan deployed API
+        env:
+          ZENVEIL_API_KEY: ${{ secrets.ZENVEIL_API_KEY }}
+          DEPLOY_URL: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          zenveil scan api $DEPLOY_URL --json api-headers.json
+```
+
+## Stage 5: Developer feedback loop
+
+After fixing issues, close the loop with feedback:
+
+```bash
+# Record that findings were real and fixed
+zenveil feedback ZG-A1B2 correct
+zenveil feedback ZG-C3D4 correct
+
+# Record false positives to improve future scanning
+zenveil feedback ZG-X1Y2 false_positive
+
+# Suppress known acceptable risks
+zenveil ignore ZG-L3M4 --reason "Accepted risk: internal admin tool, not customer-facing"
+```
+
+## Security posture over time
+
+With this workflow in place, your security posture compounds:
+
+| Stage | What you gain |
+|---|---|
+| Local pre-commit hook | Secrets never reach git history |
+| PR gate | Vulnerabilities don't ship to main |
+| Weekly CVE scan | New vulnerabilities in old code are caught |
+| Post-deploy API scan | Configuration drift is detected |
+| Feedback loop | False positive rate drops, signal improves |
+
+After 4 weeks: fewer findings, faster reviews, more developer confidence.
+After 3 months: your codebase has a measurable security improvement baseline.
+After 6 months: security is part of how the team ships — not a separate audit.

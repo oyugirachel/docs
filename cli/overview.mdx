@@ -1,0 +1,120 @@
+---
+title: "CLI Overview"
+description: "Complete command reference for the ZenVeil CLI. Every command, every flag, every option."
+---
+
+## Command structure
+
+```
+zenveil [--verbose] <command> [arguments] [flags]
+```
+
+## Global flags
+
+| Flag | Description |
+|---|---|
+| `--verbose` | Enable debug logging — shows scanner internals, HTTP requests, and AI token streaming |
+
+## Command groups
+
+<CardGroup cols={2}>
+  <Card title="Scanning" icon="magnifying-glass">
+    `scan repo` · `scan github` · `scan api`
+
+    Point ZenVeil at a target and get findings. Works offline for local repos.
+  </Card>
+  <Card title="Findings" icon="list">
+    `list` · `stats` · `ignore` · `feedback`
+
+    Browse, filter, suppress, and rate findings from the last scan.
+  </Card>
+  <Card title="AI Analysis" icon="wand-magic-sparkles">
+    `explain` · `fix` · `triage` · `agent`
+
+    Claude-powered explanations, fixes, prioritization, and interactive REPL.
+  </Card>
+  <Card title="Reporting" icon="file-export">
+    `report json` · `report html`
+
+    Export the last scan to structured JSON or a shareable HTML report.
+  </Card>
+</CardGroup>
+
+## Full command reference
+
+### Scanning
+
+| Command | Description |
+|---|---|
+| `zenveil scan repo <path>` | Scan a local directory |
+| `zenveil scan repo <path> --check-cves` | Include CVE checks via OSV.dev |
+| `zenveil scan repo <path> --json <file>` | Write results to JSON |
+| `zenveil scan github <owner/repo>` | Scan a GitHub repository |
+| `zenveil scan github <owner/repo> --token <tok>` | Use a GitHub token (or set `GITHUB_TOKEN`) |
+| `zenveil scan github <owner/repo> --ref <branch>` | Scan a specific branch, tag, or commit |
+| `zenveil scan github <owner/repo> --auto-pr-low` | Open a PR when all findings are LOW severity |
+| `zenveil scan github <url>` | Full GitHub URL format also accepted |
+| `zenveil scan api <url>` | Scan an API endpoint for security headers |
+
+### Findings
+
+| Command | Description |
+|---|---|
+| `zenveil list` | List all findings from the last scan |
+| `zenveil list --severity high,critical` | Filter by severity level(s) |
+| `zenveil list --scanner secrets` | Filter by scanner name |
+| `zenveil stats` | Show scan statistics (target, duration, counts by severity and scanner) |
+| `zenveil ignore <id>` | Suppress a finding from future reports |
+| `zenveil ignore <id> --reason "text"` | Suppress with a documented reason |
+| `zenveil feedback <id> correct` | Record that a finding is accurate |
+| `zenveil feedback <id> false_positive` | Record that a finding is a false positive |
+| `zenveil feedback <id> low_priority` | Record that a finding exists but is acceptable |
+
+### AI analysis
+
+| Command | Description |
+|---|---|
+| `zenveil explain <id>` | Stream an AI explanation of a finding |
+| `zenveil fix <id>` | Stream an AI-generated fix |
+| `zenveil fix <id> --auto-pr --repo <r>` | Generate a fix and open a GitHub PR |
+| `zenveil fix <id> --auto-pr --repo <r> --token <tok>` | Use a specific GitHub token |
+| `zenveil triage` | AI-prioritized remediation plan for all findings |
+| `zenveil agent` | Interactive AI security REPL |
+
+### Reporting
+
+| Command | Description |
+|---|---|
+| `zenveil report json <file>` | Export last scan to JSON |
+| `zenveil report html <file>` | Export last scan to HTML |
+
+## Environment variables
+
+| Variable | Used by | Description |
+|---|---|---|
+| `ZENVEIL_API_KEY` | All | Your ZenVeil API key |
+| `ANTHROPIC_API_KEY` | `explain`, `fix`, `triage`, `agent` | Anthropic API key for Claude |
+| `GITHUB_TOKEN` | `scan github`, `fix --auto-pr` | GitHub personal access token |
+| `ZENVEIL_WEB_URL` | Billing (self-hosted) | Override the billing API URL |
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success — scan completed, no CRITICAL or HIGH findings |
+| `1` | Security gate triggered — one or more CRITICAL or HIGH findings |
+| `2` | Error — invalid arguments, missing scan cache, network failure |
+
+Use exit codes in CI to gate deployments:
+
+```bash
+zenveil scan repo . && echo "✓ Security gate passed" || echo "✗ Security issues found"
+```
+
+## Getting help
+
+```bash
+zenveil help          # Formatted command listing with examples
+zenveil --help        # argparse help
+zenveil scan --help   # Subcommand help
+```

@@ -1,0 +1,133 @@
+---
+title: "zenveil agent"
+description: "An interactive AI security REPL — ask questions about your findings, get instant answers."
+---
+
+## Overview
+
+`zenveil agent` launches an interactive, conversational AI security assistant pre-loaded with your last scan results. Ask questions in plain English — get expert answers grounded in your specific codebase.
+
+## Usage
+
+```bash
+zenveil agent [flags]
+```
+
+## Flags
+
+| Flag | Description |
+|---|---|
+| `--api-key <key>` | Anthropic API key. Defaults to `ANTHROPIC_API_KEY` env var. |
+
+## Example session
+
+```
+$ zenveil agent
+
+  ╭─────────────────────────────────────────────────────────────╮
+  │  ZenVeil AI Security Agent                                  │
+  │  Loaded 5 findings from /home/user/my-api                   │
+  │  Type your question or "exit" to quit.                      │
+  ╰─────────────────────────────────────────────────────────────╯
+
+You: Which of my findings should I fix first?
+
+Agent: The most urgent finding is ZG-A1B2 — the exposed AWS access key
+  in src/config.js:14. This is a CRITICAL severity issue because active
+  AWS credentials in source code can be scraped within minutes by
+  automated bots monitoring GitHub and other code hosts.
+
+  I'd fix it in this order:
+  1. ZG-A1B2 (AWS key) — revoke immediately, takes 5 minutes
+  2. ZG-C3D4 (.env committed) — rotate all secrets in the file
+  3. ZG-G7H8 (missing lockfile) — run `npm install`, 2 minutes
+  4. ZG-E5F6 (localStorage tokens) — plan for next sprint
+  5. ZG-I9J0 (debug mode) — low risk if not in production
+
+You: Tell me more about the localStorage finding. Is it really that bad?
+
+Agent: It depends on your XSS exposure. Here's the risk model:
+
+  If your app has zero XSS vulnerabilities → LOW practical risk
+  If any third-party script runs on your app → HIGH practical risk
+  If users can input content that renders as HTML → CRITICAL risk
+
+  The pattern `localStorage.setItem('auth_token', token)` in your code
+  at src/auth/login.js:8 means any script with same-origin access can
+  call `localStorage.getItem('auth_token')` and exfiltrate the token.
+  That includes ad scripts, analytics, chat widgets, and injected content.
+
+  The correct fix is httpOnly cookies — they're inaccessible to JavaScript
+  entirely. Want me to show you the Express.js migration?
+
+You: Yes, show me the Express fix
+
+Agent: Here's the full migration from localStorage to httpOnly cookies:
+
+  **Server-side (Express.js):**
+
+  ```javascript
+  // Before: client stores token
+  // res.json({ token })
+
+  // After: server sets httpOnly cookie
+  res.cookie('session_id', token, {
+    httpOnly: true,          // No JS access
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
+    sameSite: 'strict',      // No cross-origin requests
+    maxAge: 60 * 60 * 1000, // 1 hour
+    path: '/',
+  });
+  res.json({ success: true }); // Don't return the token
+  ```
+
+  **Client-side: remove localStorage entirely**
+
+  ```javascript
+  // Remove this line:
+  // localStorage.setItem('auth_token', response.token);
+
+  // The cookie is sent automatically with every request
+  // No client-side token management needed
+  ```
+
+  **Logout (server-side):**
+  ```javascript
+  res.clearCookie('session_id');
+  // Also invalidate the session server-side (token blacklist or DB delete)
+  res.json({ success: true });
+  ```
+
+You: exit
+
+  Goodbye. Run `zenveil scan repo .` anytime to refresh findings.
+```
+
+## What you can ask
+
+The agent has full context of all findings from the last scan. Good questions:
+
+- "Which findings should I fix first?"
+- "Explain finding ZG-XXXX in simple terms"
+- "Is finding ZG-XXXX a false positive?"
+- "Generate a fix for ZG-XXXX in [Python/Go/Rust/etc.]"
+- "How does this finding relate to OWASP A01?"
+- "What's the business impact of leaving ZG-XXXX unresolved?"
+- "How would an attacker exploit ZG-XXXX?"
+- "What security patterns should I adopt for [JWT auth / file uploads / etc.]?"
+
+## Feedback loop
+
+When the agent gives you useful analysis, use `zenveil feedback` to record it:
+
+```bash
+zenveil feedback ZG-A1B2 correct
+zenveil feedback ZG-I9J0 false_positive
+```
+
+This builds a lightweight feedback store that improves future filtering.
+
+## Prerequisites
+
+- Run `zenveil scan` first
+- `ANTHROPIC_API_KEY` set in your environment

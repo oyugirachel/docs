@@ -1,72 +1,112 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "ZenVeil",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#A78BFA",
+    "light": "#C4B5FD",
+    "dark": "#7C3AED"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
+              "introduction",
+              "why-zenveil",
               "quickstart",
-              "development"
+              "installation",
+              "how-it-works"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Scanners",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "scanners/secrets",
+              "scanners/supply-chain",
+              "scanners/api-headers",
+              "scanners/cicd"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Integrations",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/components",
-              "essentials/reusable-snippets"
+              "integrations/github",
+              "integrations/gitlab",
+              "integrations/slack",
+              "integrations/ci-cd"
             ]
           },
           {
-            "group": "Agent ready",
+            "group": "Examples",
             "pages": [
-              "agent-ready/prompt",
-              "agent-ready/visibility",
-              "agent-ready/contextual",
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "examples/secret-detection",
+              "examples/ai-remediation",
+              "examples/devsecops-workflow",
+              "examples/owasp-findings"
+            ]
+          },
+          {
+            "group": "Plans & Pricing",
+            "pages": [
+              "plans"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "CLI Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "CLI Reference",
             "pages": [
-              "api-reference/introduction"
+              "cli/overview",
+              "cli/scan",
+              "cli/list",
+              "cli/explain",
+              "cli/fix",
+              "cli/triage",
+              "cli/agent",
+              "cli/report",
+              "cli/stats",
+              "cli/ignore",
+              "cli/feedback"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
           {
-            "group": "Endpoint examples",
+            "group": "API Reference",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/overview",
+              "api-reference/authentication",
+              "api-reference/scan-github",
+              "api-reference/scan-api",
+              "api-reference/explain",
+              "api-reference/fix",
+              "api-reference/fix-pr",
+              "api-reference/triage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Security",
+        "groups": [
+          {
+            "group": "Security",
+            "pages": [
+              "security/philosophy",
+              "security/data-privacy",
+              "security/api-key-handling",
+              "security/responsible-disclosure"
             ]
           }
         ]
@@ -75,52 +115,56 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "GitHub",
+          "href": "https://github.com/zenveil/zenveil",
+          "icon": "github"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Discord",
+          "href": "https://discord.gg/zenveil",
+          "icon": "discord"
+        },
+        {
+          "anchor": "Status",
+          "href": "https://status.zenveil.dev",
+          "icon": "signal"
         }
       ]
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/zenveil-light.svg",
+    "dark": "/logo/zenveil-dark.svg"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "background": {
+    "image": "/images/background.png"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Dashboard",
+        "href": "https://app.zenveil.dev"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Start Free",
+      "href": "https://app.zenveil.dev/signup"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "twitter": "https://twitter.com/zenveil",
+      "github": "https://github.com/zenveil/zenveil",
+      "linkedin": "https://linkedin.com/company/zenveil"
+    }
+  },
+  "integrations": {
+    "posthog": {
+      "apiKey": "phc_YOUR_KEY"
     }
   }
 }

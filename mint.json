@@ -1,0 +1,163 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "ZenVeil",
+  "logo": {
+    "dark": "/logo/zenveil-dark.svg",
+    "light": "/logo/zenveil-light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "openGraph": {
+    "image": "/images/og-image.svg"
+  },
+  "colors": {
+    "primary": "#A78BFA",
+    "light": "#C4B5FD",
+    "dark": "#7C3AED",
+    "anchors": {
+      "from": "#A78BFA",
+      "to": "#38BDF8"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Dashboard",
+      "url": "https://app.zenveil.dev"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Start Free",
+    "url": "https://app.zenveil.dev/signup"
+  },
+  "tabs": [
+    {
+      "name": "CLI Reference",
+      "url": "cli"
+    },
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "Security",
+      "url": "security"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/zenveil/zenveil"
+    },
+    {
+      "name": "Discord",
+      "icon": "discord",
+      "url": "https://discord.gg/zenveil"
+    },
+    {
+      "name": "Status",
+      "icon": "signal",
+      "url": "https://status.zenveil.dev"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction",
+        "why-zenveil",
+        "quickstart",
+        "installation",
+        "how-it-works"
+      ]
+    },
+    {
+      "group": "CLI Reference",
+      "pages": [
+        "cli/overview",
+        "cli/scan",
+        "cli/list",
+        "cli/explain",
+        "cli/fix",
+        "cli/triage",
+        "cli/agent",
+        "cli/report",
+        "cli/stats",
+        "cli/ignore",
+        "cli/feedback"
+      ]
+    },
+    {
+      "group": "Scanners",
+      "pages": [
+        "scanners/secrets",
+        "scanners/supply-chain",
+        "scanners/api-headers",
+        "scanners/cicd"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/overview",
+        "api-reference/authentication",
+        "api-reference/scan-github",
+        "api-reference/scan-api",
+        "api-reference/explain",
+        "api-reference/fix",
+        "api-reference/fix-pr",
+        "api-reference/triage"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/github",
+        "integrations/gitlab",
+        "integrations/slack",
+        "integrations/ci-cd"
+      ]
+    },
+    {
+      "group": "Security",
+      "pages": [
+        "security/philosophy",
+        "security/data-privacy",
+        "security/api-key-handling",
+        "security/responsible-disclosure"
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "examples/secret-detection",
+        "examples/ai-remediation",
+        "examples/devsecops-workflow",
+        "examples/owasp-findings"
+      ]
+    },
+    {
+      "group": "Plans & Pricing",
+      "pages": [
+        "plans"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/zenveil",
+    "github": "https://github.com/zenveil/zenveil",
+    "linkedin": "https://linkedin.com/company/zenveil"
+  },
+  "backgroundImage": "/images/background.png",
+  "modeToggle": {
+    "default": "dark"
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_YOUR_KEY"
+    }
+  }
+}
