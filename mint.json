@@ -21,12 +21,12 @@
   "topbarLinks": [
     {
       "name": "Dashboard",
-      "url": "https://app.zenveil.dev"
+      "url": "https://zenveil.dev/dashboard"
     }
   ],
   "topbarCtaButton": {
     "name": "Start Free",
-    "url": "https://app.zenveil.dev/signup"
+    "url": "https://zenveil.dev"
   },
   "tabs": [
     {

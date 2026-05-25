@@ -62,20 +62,28 @@ pip install -e .
 
 ### API key setup
 
-Get your API key from the [ZenVeil dashboard](https://app.zenveil.dev/settings/api-keys) and set it as an environment variable:
+Your API key is generated the first time you sign in at [zenveil.dev](https://zenveil.dev) and emailed to you immediately. It starts with `zv_live_` and is shown **once** — store it somewhere safe before closing the email.
+
+Set it as an environment variable:
 
 ```bash
-export ZENVEIL_API_KEY="zvk_live_your_key_here"
+export ZENVEIL_API_KEY="zv_live_your_key_here"
 ```
 
-To make it permanent, add it to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
+To make it permanent, add it to your shell profile:
 
 ```bash
-echo 'export ZENVEIL_API_KEY="zvk_live_your_key_here"' >> ~/.zshrc
+echo 'export ZENVEIL_API_KEY="zv_live_your_key_here"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Or use `zenveil login` to authenticate interactively — this stores your key in `~/.zenveil/credentials`.
+Or use `zenveil login` to authenticate interactively — this stores your key in `~/.zenveil/credentials` so you never have to export it manually.
+
+<Warning>
+  **Lost your key?** Go to **Dashboard → Settings → API Key → Rotate Key**.
+  A new key is generated immediately and emailed to you. Your old key stops working the moment you rotate.
+  Update any CI/CD pipelines or `.env` files that reference the old key.
+</Warning>
 
 ### Optional: AI analysis keys
 
