@@ -106,6 +106,7 @@ Scan any GitHub repository without cloning it. ZenVeil downloads the archive, sc
 | `--token <tok>` | GitHub personal access token. Defaults to `GITHUB_TOKEN` env var. Required for private repos. |
 | `--ref <ref>` | Branch, tag, or commit SHA to scan. Defaults to the default branch. |
 | `--check-cves` | Query OSV.dev for known CVEs |
+| `--exclude-tests` | Skip findings in test, fixture, mock, and example files entirely. See [Context-aware scanning](#context-aware-scanning) below. |
 | `--json <file>` | Write results to JSON |
 | `--auto-pr-low` | Open a pull request if all findings are LOW severity |
 
@@ -130,9 +131,70 @@ zenveil scan github owner/repo --ref abc123def456
 # With CVE checks and JSON output
 zenveil scan github owner/repo --check-cves --json github-scan.json
 
+# Scan only production files (skip test/fixture/example files)
+zenveil scan github owner/repo --exclude-tests
+
 # Auto-open PR if only low severity findings
 zenveil scan github owner/repo --auto-pr-low
 ```
+
+---
+
+## Context-aware scanning
+
+ZenVeil scans **all files by default** — including test, fixture, mock, and example directories. This is intentional. Some of the most damaging credential leaks in the industry originated in files developers considered "safe":
+
+```
+tests/test_auth.py       → AWS_SECRET_KEY = "AKIA..."
+payment.test.js          → STRIPE_KEY = "sk_live_..."
+fixtures/mock_config.yml → DB_PASSWORD = "prod-password-123"
+```
+
+Rather than ignoring these files and creating blind spots, ZenVeil **classifies findings by context** and adjusts severity accordingly.
+
+### How severity is downgraded
+
+| Original severity | In test/fixture/example file |
+|---|---|
+| CRITICAL | → MEDIUM |
+| HIGH | → LOW |
+| MEDIUM | → LOW |
+| LOW | → LOW |
+
+### Context labels in output
+
+Every finding includes a context badge so you know exactly where it came from:
+
+| Badge | Directories matched |
+|---|---|
+| `prod` | `src/`, `lib/`, `app/`, all other paths |
+| `test` | `tests/`, `test/`, `spec/`, `__tests__/`, `e2e/`, `*.test.*`, `*.spec.*` |
+| `fixture` | `fixtures/`, `mocks/`, `stubs/`, `fakes/`, `seeds/`, `testdata/` |
+| `example` | `examples/`, `demos/`, `samples/` |
+
+### Example output
+
+```
+╭─────────────────────────────────────────────────────────────────────╮
+│ ⚡ ZenVeil  Security Scan                                           │
+│   Target  github acme-corp/payments-api                             │
+│   Results 4 production  /  2 test/fixture (severity downgraded)     │
+╰─────────────────────────────────────────────────────────────────────╯
+
+  ID               SEVERITY    CONTEXT   SCANNER   TITLE                        LOCATION
+  ZG-A1B2C3D4E5   ● CRITICAL   prod      secrets   AWS access key               src/config.py:14
+  ZG-F6G7H8I9J0   ● MEDIUM     test      secrets   AWS access key (test file)   tests/test_auth.py:8
+```
+
+The same pattern detected. Different context. Different severity. This reduces alert fatigue without blind-spotting real leaks.
+
+### When to use `--exclude-tests`
+
+Use `--exclude-tests` only when:
+- You have already audited your test files and confirmed no real credentials exist
+- You want a tighter signal-to-noise ratio for a specific scan
+
+The default (scan everything) is recommended. Credentials committed to test history are still in your git history — and still exploitable.
 
 ### GitHub token permissions
 
