@@ -1,0 +1,49 @@
+---
+title: "zenveil docs"
+description: "Open ZenVeil documentation in your browser from the terminal."
+---
+
+## Overview
+
+`zenveil docs` opens the ZenVeil documentation site in your default browser. Pass an optional topic to jump directly to a specific section.
+
+## Usage
+
+```bash
+zenveil docs [topic]
+```
+
+## Arguments
+
+| Argument | Description |
+|---|---|
+| `topic` | Optional. One of: `auth`, `secrets`, `supply-chain`, `api` |
+
+## Examples
+
+```bash
+# Open docs home
+zenveil docs
+
+# Jump straight to authentication guide
+zenveil docs auth
+
+# Jump to secrets scanner reference
+zenveil docs secrets
+
+# Jump to supply-chain scanner reference
+zenveil docs supply-chain
+
+# Jump to API scanner reference
+zenveil docs api
+```
+
+## Topics
+
+| Topic | Opens |
+|---|---|
+| *(none)* | `https://zenveil.dev/docs` |
+| `auth` | `https://zenveil.dev/docs/authentication` |
+| `secrets` | `https://zenveil.dev/docs/scanners/secrets` |
+| `supply-chain` | `https://zenveil.dev/docs/scanners/supply-chain` |
+| `api` | `https://zenveil.dev/docs/scanners/api` |

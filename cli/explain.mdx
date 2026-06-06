@@ -3,6 +3,10 @@ title: "zenveil explain"
 description: "Get a plain-language AI explanation of any security finding — what it is, why it matters, and how to fix it."
 ---
 
+<Info>
+  `zenveil explain` requires a **Pro** plan. Run `zenveil upgrade` to unlock it, or `zenveil whoami` to check your current plan.
+</Info>
+
 ## Overview
 
 `zenveil explain` uses Claude to generate a detailed, developer-friendly explanation of a specific finding. It streams the response to your terminal in real time.
@@ -10,29 +14,20 @@ description: "Get a plain-language AI explanation of any security finding — wh
 ## Usage
 
 ```bash
-zenveil explain <finding_id> [flags]
+zenveil explain <finding_id>
 ```
 
 ## Arguments
 
 | Argument | Description |
 |---|---|
-| `finding_id` | The finding ID (e.g., `ZG-A1B2C3`) |
-
-## Flags
-
-| Flag | Description |
-|---|---|
-| `--api-key <key>` | Anthropic API key. Defaults to `ANTHROPIC_API_KEY` env var. |
+| `finding_id` | The finding ID (e.g., `ZV-A1B2C3`) |
 
 ## Examples
 
 ```bash
 # Explain a finding
-zenveil explain ZG-A1B2C3
-
-# Use a specific API key
-zenveil explain ZG-A1B2C3 --api-key sk-ant-your_key
+zenveil explain ZV-A1B2C3
 ```
 
 ## Sample output
@@ -100,4 +95,4 @@ Every explanation covers:
 ## Prerequisites
 
 - Run `zenveil scan` first to populate the finding cache
-- `ANTHROPIC_API_KEY` set in your environment (or passed via `--api-key`)
+- A **Pro** plan (run `zenveil upgrade` to subscribe)

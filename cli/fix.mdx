@@ -3,9 +3,13 @@ title: "zenveil fix"
 description: "Generate AI-powered fixes for security findings and open GitHub pull requests automatically."
 ---
 
+<Info>
+  `zenveil fix` requires a **Pro** plan. Run `zenveil upgrade` to unlock it, or `zenveil whoami` to check your current plan.
+</Info>
+
 ## Overview
 
-`zenveil fix` uses Claude to generate a production-ready fix for a specific finding from the last scan. With `--auto-pr`, it creates a GitHub pull request with the fix applied.
+`zenveil fix` uses Claude to generate a production-ready fix for a specific finding from the last scan. The fix is rendered with syntax-highlighted code blocks in your terminal. With `--auto-pr`, it creates a GitHub pull request with the fix applied.
 
 ## Usage
 
@@ -23,7 +27,6 @@ zenveil fix <finding_id> [flags]
 
 | Flag | Description |
 |---|---|
-| `--api-key <key>` | Anthropic API key. Defaults to `ANTHROPIC_API_KEY` env var. |
 | `--auto-pr` | Open a GitHub pull request with the fix. Requires `--repo`. |
 | `--repo <r>` | GitHub repository (`owner/repo` or full URL). Required with `--auto-pr`. |
 | `--token <tok>` | GitHub token. Defaults to `GITHUB_TOKEN` env var. |
@@ -31,17 +34,14 @@ zenveil fix <finding_id> [flags]
 ## Examples
 
 ```bash
-# Generate a fix and print it to the terminal
-zenveil fix ZG-A1B2C3
+# Generate a fix — output rendered with syntax-highlighted code blocks
+zenveil fix ZV-A1B2C3
 
 # Generate fix and open a GitHub PR
-zenveil fix ZG-A1B2C3 --auto-pr --repo owner/my-app
+zenveil fix ZV-A1B2C3 --auto-pr --repo owner/my-app
 
 # Use a specific GitHub token
-zenveil fix ZG-A1B2C3 --auto-pr --repo owner/my-app --token ghp_your_token
-
-# Use a specific Anthropic API key
-zenveil fix ZG-A1B2C3 --api-key sk-ant-your_key
+zenveil fix ZV-A1B2C3 --auto-pr --repo owner/my-app --token ghp_your_token
 ```
 
 ## How it works
@@ -124,7 +124,7 @@ For secret redaction PRs, no `ANTHROPIC_API_KEY` is required — ZenVeil uses de
 ## Prerequisites
 
 - Run `zenveil scan` first — `fix` operates on the cached scan result
-- `ANTHROPIC_API_KEY` for AI-generated fixes (not required for secret redaction)
+- A **Pro** plan (run `zenveil upgrade` to subscribe)
 - `GITHUB_TOKEN` with `repo` scope for `--auto-pr`
 
 ## GitHub token requirements

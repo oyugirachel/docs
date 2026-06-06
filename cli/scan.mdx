@@ -93,6 +93,18 @@ zenveil scan github <repository>
 
 Scan any GitHub repository without cloning it. ZenVeil downloads the archive, scans it in a temporary directory, and deletes it — no code is stored.
 
+Progress is shown as an animated five-step panel in the terminal:
+
+```
+  Scanning  owner/repo
+
+  ✓  🔍  Cloning repository
+  ✓  🔐  Running secrets scanner
+  ✓  📦  Running supply-chain scanner
+  ✓  🧪  Running code analysis
+  ✓  🔬  Aggregating results
+```
+
 ### Arguments
 
 | Argument | Description |
@@ -107,17 +119,12 @@ Scan any GitHub repository without cloning it. ZenVeil downloads the archive, sc
 | `--ref <ref>` | Branch, tag, or commit SHA to scan. Defaults to the default branch. |
 | `--check-cves` | Query OSV.dev for known CVEs |
 | `--exclude-tests` | Skip findings in test, fixture, mock, and example files entirely. See [Context-aware scanning](#context-aware-scanning) below. |
-| `--json <file>` | Write results to JSON |
-| `--auto-pr-low` | Open a pull request if all findings are LOW severity |
 
 ### Examples
 
 ```bash
 # Scan a public repository
-zenveil scan github torvalds/linux
-
-# Scan using a full URL
-zenveil scan github https://github.com/owner/repo
+zenveil scan github owner/repo
 
 # Scan a private repository with a token
 zenveil scan github owner/private-repo --token ghp_your_token
@@ -128,14 +135,11 @@ zenveil scan github owner/repo --ref feature/new-auth
 # Scan a specific commit
 zenveil scan github owner/repo --ref abc123def456
 
-# With CVE checks and JSON output
-zenveil scan github owner/repo --check-cves --json github-scan.json
+# With CVE checks
+zenveil scan github owner/repo --check-cves
 
 # Scan only production files (skip test/fixture/example files)
 zenveil scan github owner/repo --exclude-tests
-
-# Auto-open PR if only low severity findings
-zenveil scan github owner/repo --auto-pr-low
 ```
 
 ---

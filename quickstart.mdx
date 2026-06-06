@@ -33,11 +33,26 @@ description: "From zero to your first security scan in 60 seconds."
     zenveil login
     ```
 
-    This opens your browser to complete authentication and stores your API key locally. Your key is written to `~/.zenveil/credentials` and never transmitted in plain text.
+    This displays a step-by-step guide, then prompts you to paste your API key — the input is hidden (like a `sudo` password). The key is saved to `~/.zenveil/credentials` and never appears in shell history or process listings.
 
-    <Note>
-      No account yet? Sign up at [zenveil.dev](https://zenveil.dev) — free tier included.
-    </Note>
+    ```
+    ╭──────────────────────────────────────────────────────────────────╮
+    │                                                                  │
+    │  🔐 ZenVeil Authentication                                       │
+    │                                                                  │
+    │  1  Open  https://zenveil.dev                                    │
+    │  2  Sign up — free, no credit card needed                        │
+    │  3  Go to  Settings → API Keys  and copy your key               │
+    │  4  Paste below — key is hidden, never saved to shell history    │
+    │                                                                  │
+    ╰──────────────────────────────────────────────────────────────────╯
+
+      Paste your API key (hidden):
+    ```
+
+    <Tip>
+      Check your email and plan any time with `zenveil whoami`.
+    </Tip>
   </Step>
 
   <Step title="Scan your repository">
@@ -148,15 +163,14 @@ description: "From zero to your first security scan in 60 seconds."
 
 | Variable | Required for | Example |
 |---|---|---|
-| `ZENVEIL_API_KEY` | All CLI commands | `zvk_live_...` |
-| `ANTHROPIC_API_KEY` | `explain`, `fix`, `triage`, `agent` | `sk-ant-...` |
-| `GITHUB_TOKEN` | GitHub scanning, auto-PR | `ghp_...` |
-| `ZENVEIL_WEB_URL` | Billing API (self-hosted) | `https://api.zenveil.dev` |
+| `ZENVEIL_API_KEY` | All CLI commands (alternative to `zenveil login`) | `zvk_live_...` |
+| `GITHUB_TOKEN` | GitHub scanning, `fix --auto-pr` | `ghp_...` |
+| `ZENVEIL_API_URL` | Self-hosted scanning API | `https://api.zenveil.dev` |
+| `ZENVEIL_WEB_URL` | Self-hosted billing server | `https://zenveil-server.onrender.com` |
 
-Set them in your shell profile or `.env` file:
+Set them in your shell profile or CI secrets:
 
 ```bash
 export ZENVEIL_API_KEY="zvk_live_your_key_here"
-export ANTHROPIC_API_KEY="sk-ant-your_key_here"
 export GITHUB_TOKEN="ghp_your_github_token"
 ```

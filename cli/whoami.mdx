@@ -1,0 +1,48 @@
+---
+title: "zenveil whoami"
+description: "Display your account email and current subscription plan."
+---
+
+## Overview
+
+`zenveil whoami` fetches your account details from the ZenVeil API and prints them to the terminal — useful for confirming which API key is active and what plan you're on.
+
+## Usage
+
+```bash
+zenveil whoami
+```
+
+## Sample output
+
+```
+╭─── Account ──────────────────────────────────────────────╮
+│                                                           │
+│  Email   you@example.com                                  │
+│  Plan    Pro                                              │
+│                                                           │
+╰───────────────────────────────────────────────────────────╯
+```
+
+For a Free plan:
+
+```
+╭─── Account ──────────────────────────────────────────────╮
+│                                                           │
+│  Email   you@example.com                                  │
+│  Plan    Free                                             │
+│                                                           │
+│  Run zenveil upgrade  to unlock AI analysis.              │
+│                                                           │
+╰───────────────────────────────────────────────────────────╯
+```
+
+## Prerequisites
+
+- An API key saved via `zenveil login` (or set as `ZENVEIL_API_KEY`)
+
+## Related commands
+
+- [`zenveil login`](/cli/login) — save your API key
+- [`zenveil upgrade`](/cli/overview#billing) — upgrade to Pro
+- [`zenveil billing`](/cli/overview#billing) — manage your subscription

@@ -1,0 +1,90 @@
+---
+title: "zenveil login"
+description: "Save your ZenVeil API key securely. The key is never saved to shell history or visible in the process list."
+---
+
+## Overview
+
+`zenveil login` saves your API key to `~/.zenveil/credentials`. When called without arguments it displays a step-by-step onboarding guide before prompting you to paste your key — the input is hidden (like `sudo` password entry).
+
+## Usage
+
+```bash
+zenveil login [api_key] [--url <api_url>]
+```
+
+## Arguments
+
+| Argument | Description |
+|---|---|
+| `api_key` | Optional. Your API key. Omit to be prompted securely. |
+
+## Flags
+
+| Flag | Description |
+|---|---|
+| `--url <api_url>` | Custom API URL. Used only for self-hosted deployments. |
+
+## Interactive flow
+
+Running `zenveil login` with no arguments shows a guided panel first:
+
+```
+╭──────────────────────────────────────────────────────────────────╮
+│                                                                  │
+│  🔐 ZenVeil Authentication                                       │
+│                                                                  │
+│  1  Open  https://zenveil.dev                                    │
+│  2  Sign up — free, no credit card needed                        │
+│  3  Go to  Settings → API Keys  and copy your key               │
+│  4  Paste below — key is hidden, never saved to shell history    │
+│                                                                  │
+╰──────────────────────────────────────────────────────────────────╯
+
+  Paste your API key (hidden):
+```
+
+The key input uses `getpass` — it does not echo to the terminal, is not saved to shell history, and does not appear in `ps` output.
+
+## Examples
+
+```bash
+# Guided interactive flow (recommended)
+zenveil login
+
+# Pass key directly (useful in scripts — prefer ZENVEIL_API_KEY env var)
+zenveil login zvk_live_your_key_here
+```
+
+<Warning>
+Passing the API key as a command-line argument records it in your shell history. For scripts and CI, use the `ZENVEIL_API_KEY` environment variable instead.
+</Warning>
+
+## Where the key is stored
+
+The key is written to `~/.zenveil/credentials` (mode `600`). It is read by all CLI commands that contact the ZenVeil API.
+
+## Environment variable alternative
+
+You can skip `zenveil login` entirely by setting the environment variable:
+
+```bash
+export ZENVEIL_API_KEY="zvk_live_your_key_here"
+```
+
+The environment variable takes precedence over the saved credentials file.
+
+## Checking your account
+
+After logging in, verify your key and plan with:
+
+```bash
+zenveil whoami
+```
+
+## Getting an API key
+
+1. Sign up at [zenveil.dev](https://zenveil.dev) — free, no credit card needed
+2. Go to **Settings → API Keys**
+3. Click **Create API key** and copy it
+4. Run `zenveil login` and paste when prompted

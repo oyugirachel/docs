@@ -74,6 +74,8 @@
       "group": "CLI Reference",
       "pages": [
         "cli/overview",
+        "cli/login",
+        "cli/whoami",
         "cli/scan",
         "cli/list",
         "cli/explain",
@@ -83,7 +85,8 @@
         "cli/report",
         "cli/stats",
         "cli/ignore",
-        "cli/feedback"
+        "cli/feedback",
+        "cli/docs"
       ]
     },
     {
