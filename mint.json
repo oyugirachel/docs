@@ -95,6 +95,7 @@
         "scanners/secrets",
         "scanners/supply-chain",
         "scanners/api-headers",
+        "scanners/api-security",
         "scanners/cicd"
       ]
     },
