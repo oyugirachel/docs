@@ -116,7 +116,7 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/zenveil/zenveil",
+          "href": "https://github.com/ZenVeilHq",
           "icon": "github"
         },
         {
@@ -157,8 +157,8 @@
   },
   "footer": {
     "socials": {
-      "twitter": "https://twitter.com/zenveil",
-      "github": "https://github.com/zenveil/zenveil",
+      "x": "https://x.com/zenveilhq?s=11",
+      "github": "https://github.com/ZenVeilHq",
       "linkedin": "https://linkedin.com/company/zenveil"
     }
   },

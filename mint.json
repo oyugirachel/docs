@@ -46,7 +46,7 @@
     {
       "name": "GitHub",
       "icon": "github",
-      "url": "https://github.com/zenveil/zenveil"
+      "url": "https://github.com/ZenVeilHq"
     },
     {
       "name": "Discord",
@@ -147,8 +147,8 @@
     }
   ],
   "footerSocials": {
-    "twitter": "https://twitter.com/zenveil",
-    "github": "https://github.com/zenveil/zenveil",
+    "x": "https://x.com/zenveilhq?s=11",
+    "github": "https://github.com/ZenVeilHq",
     "linkedin": "https://linkedin.com/company/zenveil"
   },
   "backgroundImage": "/images/background.png",
